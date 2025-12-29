@@ -1,6 +1,7 @@
 package main
 
 import (
+	dbgen "money-buddy-backend/db/generated"
 	"money-buddy-backend/internal/db"
 	"money-buddy-backend/internal/handlers"
 	"money-buddy-backend/internal/repositories"
@@ -16,7 +17,8 @@ func main() {
 		panic(err)
 	}
 
-	repo := repositories.NewExpenseRepositoryPostgres(dbConn)
+	queries := dbgen.New(dbConn)
+	repo := repositories.NewExpenseRepositorySQLC(queries)
 	service := services.NewExpenseService(repo)
 	handlers.NewExpenseHandler(r, service)
 
