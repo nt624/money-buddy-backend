@@ -58,3 +58,7 @@ func TestCreateExpenseHandler_Created(t *testing.T) {
 	require.Equal(t, "lunch", expense.Memo)
 	require.Equal(t, "2025-12-30", expense.SpentAt)
 }
+
+func TestCreateExpenseHandler_InvalidJSON_Skip(t *testing.T) {
+	t.Skip("SKIP: JSON異常系テストは後ほど追加します")
+}
