@@ -57,7 +57,11 @@ func TestCreateExpenseValidation(t *testing.T) {
 			out, err := s.CreateExpense(tc.input)
 
 			if tc.wantErr {
-				assert.Error(t, err, "expected error for case %s", tc.name)
+				if !assert.Error(t, err, "expected error for case %s", tc.name) {
+					return
+				}
+				var ve *ValidationError
+				assert.ErrorAs(t, err, &ve, "expected ValidationError for case %s", tc.name)
 			} else {
 				assert.NoError(t, err, "unexpected error for case %s: %v", tc.name, err)
 			}
