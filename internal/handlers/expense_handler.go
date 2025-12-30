@@ -34,7 +34,7 @@ func (h *ExpenseHandler) CreateExpense(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"expense": expense})
+	c.JSON(http.StatusCreated, gin.H{"expense": expense})
 }
 
 func (h *ExpenseHandler) ListExpenses(c *gin.Context) {
