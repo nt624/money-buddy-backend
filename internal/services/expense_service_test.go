@@ -1,6 +1,7 @@
 package services
 
 import (
+	"database/sql"
 	"errors"
 	"strings"
 	"testing"
@@ -76,3 +77,71 @@ func TestCreateExpenseValidation(t *testing.T) {
 }
 
 func intPtr(v int) *int { return &v }
+
+func TestCreateExpense_DBErrorMapping(t *testing.T) {
+	t.Parallel()
+
+	validInput := models.CreateExpenseInput{Amount: intPtr(100), CategoryID: intPtr(1), SpentAt: "2020-01-02"}
+
+	cases := []struct {
+		name     string
+		repoErr  error
+		wantType string
+		wantMsg  string
+	}{
+		{name: "sql.ErrNoRows の場合は NotFoundError", repoErr: sqlErrNoRows(), wantType: "NotFoundError", wantMsg: "not found"},
+		{name: "外部キー(category_id)違反は ValidationError", repoErr: errors.New("pq: insert or update on table \"expenses\" violates foreign key constraint \"expenses_category_id_fkey\""), wantType: "ValidationError", wantMsg: "category_id is invalid"},
+		{name: "その他の DB エラーは InternalError", repoErr: errors.New("some db problem"), wantType: "InternalError", wantMsg: "internal error"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			m := &mockRepoErr{returnErr: tc.repoErr}
+			s := NewExpenseService(m)
+
+			_, err := s.CreateExpense(validInput)
+			if !assert.Error(t, err) {
+				return
+			}
+
+			// 型の検証とメッセージ検証
+			switch tc.wantType {
+			case "NotFoundError":
+				var e *NotFoundError
+				if !assert.ErrorAs(t, err, &e) {
+					return
+				}
+				assert.Contains(t, e.Error(), tc.wantMsg)
+			case "ValidationError":
+				var e *ValidationError
+				if !assert.ErrorAs(t, err, &e) {
+					return
+				}
+				assert.Equal(t, tc.wantMsg, e.Message)
+			case "InternalError":
+				var e *InternalError
+				if !assert.ErrorAs(t, err, &e) {
+					return
+				}
+				assert.Contains(t, e.Error(), tc.wantMsg)
+			default:
+				t.Fatalf("unknown wantType: %s", tc.wantType)
+			}
+		})
+	}
+}
+
+// mockRepoErr は CreateExpense でエラーを返すモック
+type mockRepoErr struct {
+	returnErr error
+}
+
+func (m *mockRepoErr) CreateExpense(input models.CreateExpenseInput) (models.Expense, error) {
+	return models.Expense{}, m.returnErr
+}
+
+func (m *mockRepoErr) FindAll() ([]models.Expense, error) { return nil, errors.New("not implemented") }
+
+// sqlErrNoRows returns sql.ErrNoRows from database/sql
+func sqlErrNoRows() error { return sql.ErrNoRows }

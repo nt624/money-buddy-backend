@@ -12,3 +12,27 @@ func (e *ValidationError) Error() string {
 	}
 	return e.Message
 }
+
+// NotFoundError はリソースが見つからないことを表します。
+type NotFoundError struct {
+	Message string
+}
+
+func (e *NotFoundError) Error() string {
+	if e == nil {
+		return "not found"
+	}
+	return e.Message
+}
+
+// InternalError は内部エラーを表します（外部に詳細を漏らさないためのラップ）。
+type InternalError struct {
+	Message string
+}
+
+func (e *InternalError) Error() string {
+	if e == nil {
+		return "internal error"
+	}
+	return e.Message
+}

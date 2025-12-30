@@ -1,6 +1,9 @@
 package services
 
 import (
+	"database/sql"
+	"errors"
+	"strings"
 	"time"
 
 	"money-buddy-backend/internal/models"
@@ -75,7 +78,26 @@ func (s *expenseService) CreateExpense(input models.CreateExpenseInput) (models.
 
 	// 現在はカテゴリ存在チェックは行わない（将来追加予定）
 
-	return s.repo.CreateExpense(input)
+	exp, err := s.repo.CreateExpense(input)
+	if err != nil {
+		// sql.ErrNoRows -> NotFoundError
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.Expense{}, &NotFoundError{Message: "expense not found"}
+		}
+
+		// 外部キー制約（category_id）の検出。
+		// ドライバ固有の型へアサートするよりも、エラーメッセージに含まれる
+		// 文言を確認して判定する（安全策）。
+		lerr := strings.ToLower(err.Error())
+		if strings.Contains(lerr, "foreign key") && (strings.Contains(lerr, "category") || strings.Contains(lerr, "category_id")) {
+			return models.Expense{}, &ValidationError{Message: "category_id is invalid"}
+		}
+
+		// その他は内部エラーとしてラップして返す
+		return models.Expense{}, &InternalError{Message: "internal error"}
+	}
+
+	return exp, nil
 }
 
 func (s *expenseService) ListExpenses() ([]models.Expense, error) {
