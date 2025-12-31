@@ -1,0 +1,128 @@
+openapi: "3.0.3"
+info:
+  title: "Money Buddy API"
+  version: "1.0.0"
+servers:
+  - url: "http://localhost:8080"
+tags:
+  - name: "expenses"
+    description: "Expense operations"
+paths:
+  /expenses:
+    post:
+      tags:
+        - "expenses"
+      summary: "Create an expense"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExpenseRequest'
+      responses:
+        "201":
+          description: "Expense created"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateExpenseResponse'
+        "400":
+          description: "Validation Error"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          description: "Internal Server Error"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - "expenses"
+      summary: "List expenses"
+      parameters: []
+      responses:
+        "200":
+          description: "List of expenses"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  expenses:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Expense'
+                required:
+                  - expenses
+        "500":
+          description: "Internal Server Error"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    Expense:
+      type: object
+      properties:
+        id:
+          type: integer
+        amount:
+          type: integer
+          minimum: 1
+        category_id:
+          type: integer
+          minimum: 1
+        memo:
+          type: string
+        spent_at:
+          type: string
+          format: date
+      required:
+        - id
+        - amount
+        - category_id
+        - memo
+        - spent_at
+
+    CreateExpenseRequest:
+      type: object
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+        category_id:
+          type: integer
+          minimum: 1
+        memo:
+          type: string
+        spent_at:
+          type: string
+          format: date
+      required:
+        - amount
+        - category_id
+        - spent_at
+
+    CreateExpenseResponse:
+      type: object
+      properties:
+        expense:
+          $ref: '#/components/schemas/Expense'
+      required:
+        - expense
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required:
+        - code
+        - message
