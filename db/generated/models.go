@@ -9,6 +9,12 @@ import (
 	"time"
 )
 
+type Category struct {
+	ID        int32
+	Name      string
+	CreatedAt time.Time
+}
+
 type Expense struct {
 	ID         int32
 	Amount     int32

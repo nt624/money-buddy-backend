@@ -36,5 +36,9 @@ func main() {
 	service := services.NewExpenseService(repo)
 	handlers.NewExpenseHandler(r, service)
 
+	categoryRepo := repositories.NewCategoryRepositorySQLC(queries)
+	categoryService := services.NewCategoryService(categoryRepo)
+	handlers.NewCategoryHandler(r, categoryService)
+
 	r.Run() // デフォルトで:8080で起動
 }
