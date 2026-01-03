@@ -35,3 +35,7 @@ func dbCategoryToModel(c db.ListCategoriesRow) models.Category {
 		Name: c.Name,
 	}
 }
+
+func (r *CategoryRepositorySQLC) CategoryExists(ctx context.Context, id int32) (bool, error) {
+	return r.q.CategoryExists(ctx, id)
+}

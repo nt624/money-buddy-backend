@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"strings"
@@ -23,11 +24,12 @@ type ExpenseService interface {
 }
 
 type expenseService struct {
-	repo repositories.ExpenseRepository
+	repo         repositories.ExpenseRepository
+	categoryRepo repositories.CategoryRepository
 }
 
-func NewExpenseService(repo repositories.ExpenseRepository) ExpenseService {
-	return &expenseService{repo: repo}
+func NewExpenseService(repo repositories.ExpenseRepository, categoryRepo repositories.CategoryRepository) ExpenseService {
+	return &expenseService{repo: repo, categoryRepo: categoryRepo}
 }
 
 func (s *expenseService) CreateExpense(input models.CreateExpenseInput) (models.Expense, error) {
@@ -76,7 +78,15 @@ func (s *expenseService) CreateExpense(input models.CreateExpenseInput) (models.
 		return models.Expense{}, &ValidationError{Message: "memo exceeds maximum length"}
 	}
 
-	// 現在はカテゴリ存在チェックは行わない（将来追加予定）
+	// カテゴリ存在チェック（CategoryExists を用いる）
+	exists, err := s.categoryRepo.CategoryExists(context.Background(), int32(*input.CategoryID))
+	if err != nil {
+		// リポジトリ/DB からのエラーは内部エラーとして扱う
+		return models.Expense{}, &InternalError{Message: "internal error"}
+	}
+	if !exists {
+		return models.Expense{}, &ValidationError{Message: "category_id is invalid"}
+	}
 
 	exp, err := s.repo.CreateExpense(input)
 	if err != nil {

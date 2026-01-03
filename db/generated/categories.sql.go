@@ -9,6 +9,21 @@ import (
 	"context"
 )
 
+const categoryExists = `-- name: CategoryExists :one
+SELECT EXISTS (
+  SELECT 1 
+  FROM categories 
+  WHERE id = $1
+)
+`
+
+func (q *Queries) CategoryExists(ctx context.Context, id int32) (bool, error) {
+	row := q.db.QueryRowContext(ctx, categoryExists, id)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const listCategories = `-- name: ListCategories :many
 SELECT
   id,

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"strings"
@@ -26,19 +27,41 @@ func (m *mockRepo) FindAll() ([]models.Expense, error) {
 	return nil, errors.New("not implemented")
 }
 
+// mockCategoryRepo satisfies CategoryRepository for testing
+type mockCategoryRepo struct {
+	exists map[int32]bool
+	err    error
+}
+
+func (m *mockCategoryRepo) ListCategories(ctx context.Context) ([]models.Category, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockCategoryRepo) CategoryExists(ctx context.Context, id int32) (bool, error) {
+	if m.err != nil {
+		return false, m.err
+	}
+	if m.exists == nil {
+		return false, nil
+	}
+	v, ok := m.exists[id]
+	if !ok {
+		return false, nil
+	}
+	return v, nil
+}
+
 func TestCreateExpenseValidation(t *testing.T) {
 	cases := []struct {
 		name       string
 		input      models.CreateExpenseInput
 		wantErr    bool
 		wantCalled bool
-		skip       bool
-		skipReason string
 	}{
 		{name: "金額が0以下の場合はエラーになる", input: models.CreateExpenseInput{Amount: intPtr(0), CategoryID: intPtr(1), SpentAt: "2020-01-01"}, wantErr: true, wantCalled: false},
 		{name: "金額が1Bを超える場合はエラーになる", input: models.CreateExpenseInput{Amount: intPtr(1000000001), CategoryID: intPtr(1), SpentAt: "2020-01-02"}, wantErr: true, wantCalled: false},
 		{name: "カテゴリIDが0以下の場合はエラーになる", input: models.CreateExpenseInput{Amount: intPtr(100), CategoryID: intPtr(0), SpentAt: "2020-01-01"}, wantErr: true, wantCalled: false},
-		{name: "カテゴリが存在しない場合はエラーになる（将来的にカテゴリテーブルを参照）", input: models.CreateExpenseInput{Amount: intPtr(100), CategoryID: intPtr(9999), SpentAt: "2020-01-02"}, wantErr: true, wantCalled: false, skip: true, skipReason: "カテゴリ存在チェックは未実装"},
+		{name: "カテゴリが存在しない場合はエラーになる（カテゴリテーブル参照）", input: models.CreateExpenseInput{Amount: intPtr(100), CategoryID: intPtr(9999), SpentAt: "2020-01-02"}, wantErr: true, wantCalled: false},
 		{name: "spentAtがzero time（0001-01-01T00:00:00Z）の場合はエラーになる", input: models.CreateExpenseInput{Amount: intPtr(100), CategoryID: intPtr(1), SpentAt: "0001-01-01T00:00:00Z"}, wantErr: true, wantCalled: false},
 		{name: "日付のみ（YYYY-MM-DD）で正常に作成される", input: models.CreateExpenseInput{Amount: intPtr(100), CategoryID: intPtr(1), SpentAt: "2020-01-02"}, wantErr: false, wantCalled: true},
 		{name: "RFC3339形式で正常に作成される", input: models.CreateExpenseInput{Amount: intPtr(200), CategoryID: intPtr(2), SpentAt: "2020-01-02T15:04:05Z"}, wantErr: false, wantCalled: true},
@@ -48,12 +71,15 @@ func TestCreateExpenseValidation(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.skip {
-				t.Skip(tc.skipReason)
-			}
 			t.Parallel()
 			m := &mockRepo{}
-			s := NewExpenseService(m)
+			// Prepare category repo: for cases where repo should be called, mark category as existing
+			exists := map[int32]bool{}
+			if tc.input.CategoryID != nil && tc.wantCalled {
+				exists[int32(*tc.input.CategoryID)] = true
+			}
+			cr := &mockCategoryRepo{exists: exists}
+			s := NewExpenseService(m, cr)
 
 			out, err := s.CreateExpense(tc.input)
 
@@ -98,7 +124,8 @@ func TestCreateExpense_DBErrorMapping(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			m := &mockRepoErr{returnErr: tc.repoErr}
-			s := NewExpenseService(m)
+			cr := &mockCategoryRepo{exists: map[int32]bool{1: true}}
+			s := NewExpenseService(m, cr)
 
 			_, err := s.CreateExpense(validInput)
 			if !assert.Error(t, err) {
@@ -145,3 +172,23 @@ func (m *mockRepoErr) FindAll() ([]models.Expense, error) { return nil, errors.N
 
 // sqlErrNoRows returns sql.ErrNoRows from database/sql
 func sqlErrNoRows() error { return sql.ErrNoRows }
+
+func TestCreateExpense_CategoryExistsError(t *testing.T) {
+	t.Parallel()
+
+	input := models.CreateExpenseInput{Amount: intPtr(100), CategoryID: intPtr(1), SpentAt: "2020-01-02"}
+
+	m := &mockRepo{}
+	cr := &mockCategoryRepo{err: errors.New("db error")}
+	s := NewExpenseService(m, cr)
+
+	_, err := s.CreateExpense(input)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	var ie *InternalError
+	if !assert.ErrorAs(t, err, &ie) {
+		t.Fatalf("expected InternalError, got %v", err)
+	}
+	assert.False(t, m.called, "repo should not be called when category existence check fails")
+}

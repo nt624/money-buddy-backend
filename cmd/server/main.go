@@ -33,10 +33,10 @@ func main() {
 
 	queries := dbgen.New(dbConn)
 	repo := repositories.NewExpenseRepositorySQLC(queries)
-	service := services.NewExpenseService(repo)
+	categoryRepo := repositories.NewCategoryRepositorySQLC(queries)
+	service := services.NewExpenseService(repo, categoryRepo)
 	handlers.NewExpenseHandler(r, service)
 
-	categoryRepo := repositories.NewCategoryRepositorySQLC(queries)
 	categoryService := services.NewCategoryService(categoryRepo)
 	handlers.NewCategoryHandler(r, categoryService)
 
