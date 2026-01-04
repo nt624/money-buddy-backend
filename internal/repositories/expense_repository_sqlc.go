@@ -57,7 +57,7 @@ func (r *expenseRepositorySQLC) FindAll() ([]models.Expense, error) {
 
 	var out []models.Expense
 	for _, it := range items {
-		out = append(out, dbExpenseToModel(it))
+		out = append(out, dbListExpenseRowToModel(it))
 	}
 
 	return out, nil
@@ -70,10 +70,27 @@ func dbExpenseToModel(e db.Expense) models.Expense {
 	}
 
 	return models.Expense{
-		ID:         int(e.ID),
-		Amount:     int(e.Amount),
-		CategoryID: int(e.CategoryID),
-		Memo:       memo,
-		SpentAt:    e.SpentAt.Format(time.RFC3339),
+		ID:           int(e.ID),
+		Amount:       int(e.Amount),
+		CategoryID:   int(e.CategoryID),
+		CategoryName: "",
+		Memo:         memo,
+		SpentAt:      e.SpentAt.Format(time.RFC3339),
+	}
+}
+
+func dbListExpenseRowToModel(e db.ListExpensesRow) models.Expense {
+	memo := ""
+	if e.Memo.Valid {
+		memo = e.Memo.String
+	}
+
+	return models.Expense{
+		ID:           int(e.ID),
+		Amount:       int(e.Amount),
+		CategoryID:   int(e.CategoryID),
+		CategoryName: e.CategoryName,
+		Memo:         memo,
+		SpentAt:      e.SpentAt.Format(time.RFC3339),
 	}
 }

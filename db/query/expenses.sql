@@ -10,5 +10,13 @@ INSERT INTO expenses (
 RETURNING *;
 
 -- name: ListExpenses :many
-SELECT * FROM expenses
+SELECT 
+  e.id,
+  e.amount,
+  e.memo,
+  e.spent_at,
+  c.id AS category_id,
+  c.name AS category_name
+FROM expenses e
+JOIN categories c ON e.category_id = c.id
 ORDER BY spent_at DESC;

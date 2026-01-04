@@ -50,26 +50,43 @@ func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (E
 }
 
 const listExpenses = `-- name: ListExpenses :many
-SELECT id, amount, category_id, memo, spent_at, created_at FROM expenses
+SELECT 
+  e.id,
+  e.amount,
+  e.memo,
+  e.spent_at,
+  c.id AS category_id,
+  c.name AS category_name
+FROM expenses e
+JOIN categories c ON e.category_id = c.id
 ORDER BY spent_at DESC
 `
 
-func (q *Queries) ListExpenses(ctx context.Context) ([]Expense, error) {
+type ListExpensesRow struct {
+	ID           int32
+	Amount       int32
+	Memo         sql.NullString
+	SpentAt      time.Time
+	CategoryID   int32
+	CategoryName string
+}
+
+func (q *Queries) ListExpenses(ctx context.Context) ([]ListExpensesRow, error) {
 	rows, err := q.db.QueryContext(ctx, listExpenses)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Expense
+	var items []ListExpensesRow
 	for rows.Next() {
-		var i Expense
+		var i ListExpensesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Amount,
-			&i.CategoryID,
 			&i.Memo,
 			&i.SpentAt,
-			&i.CreatedAt,
+			&i.CategoryID,
+			&i.CategoryName,
 		); err != nil {
 			return nil, err
 		}
