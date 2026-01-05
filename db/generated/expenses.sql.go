@@ -20,7 +20,7 @@ INSERT INTO expenses (
 ) VALUES (
   $1, $2, $3, $4
 )
-RETURNING id, amount, category_id, memo, spent_at, created_at
+RETURNING id
 `
 
 type CreateExpenseParams struct {
@@ -30,21 +30,50 @@ type CreateExpenseParams struct {
 	SpentAt    time.Time
 }
 
-func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (Expense, error) {
+func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (int32, error) {
 	row := q.db.QueryRowContext(ctx, createExpense,
 		arg.Amount,
 		arg.CategoryID,
 		arg.Memo,
 		arg.SpentAt,
 	)
-	var i Expense
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
+const getExpenseByID = `-- name: GetExpenseByID :one
+SELECT
+  e.id,
+  e.amount,
+  e.memo,
+  e.spent_at,
+  c.id AS category_id,
+  c.name AS category_name
+FROM expenses e
+JOIN categories c ON e.category_id = c.id
+WHERE e.id = $1
+`
+
+type GetExpenseByIDRow struct {
+	ID           int32
+	Amount       int32
+	Memo         sql.NullString
+	SpentAt      time.Time
+	CategoryID   int32
+	CategoryName string
+}
+
+func (q *Queries) GetExpenseByID(ctx context.Context, id int32) (GetExpenseByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getExpenseByID, id)
+	var i GetExpenseByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Amount,
-		&i.CategoryID,
 		&i.Memo,
 		&i.SpentAt,
-		&i.CreatedAt,
+		&i.CategoryID,
+		&i.CategoryName,
 	)
 	return i, err
 }

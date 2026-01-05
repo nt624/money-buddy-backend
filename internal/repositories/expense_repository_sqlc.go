@@ -41,12 +41,17 @@ func (r *expenseRepositorySQLC) CreateExpense(input models.CreateExpenseInput) (
 		SpentAt:    spentAt,
 	}
 
-	e, err := r.q.CreateExpense(context.Background(), params)
+	id, err := r.q.CreateExpense(context.Background(), params)
 	if err != nil {
 		return models.Expense{}, err
 	}
 
-	return dbExpenseToModel(e), nil
+	row, err := r.q.GetExpenseByID(context.Background(), id)
+	if err != nil {
+		return models.Expense{}, err
+	}
+
+	return dbExpenseToModel(row), nil
 }
 
 func (r *expenseRepositorySQLC) FindAll() ([]models.Expense, error) {
@@ -63,7 +68,7 @@ func (r *expenseRepositorySQLC) FindAll() ([]models.Expense, error) {
 	return out, nil
 }
 
-func dbExpenseToModel(e db.Expense) models.Expense {
+func dbExpenseToModel(e db.GetExpenseByIDRow) models.Expense {
 	memo := ""
 	if e.Memo.Valid {
 		memo = e.Memo.String
@@ -74,7 +79,7 @@ func dbExpenseToModel(e db.Expense) models.Expense {
 		Amount:   int(e.Amount),
 		Memo:     memo,
 		SpentAt:  e.SpentAt.Format(time.RFC3339),
-		Category: models.Category{ID: int(e.CategoryID), Name: ""},
+		Category: models.Category{ID: int(e.CategoryID), Name: e.CategoryName},
 	}
 }
 
