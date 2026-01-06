@@ -39,6 +39,7 @@ func (r *expenseRepositorySQLC) CreateExpense(input models.CreateExpenseInput) (
 		CategoryID: int32(*input.CategoryID),
 		Memo:       sql.NullString{String: input.Memo, Valid: input.Memo != ""},
 		SpentAt:    spentAt,
+		Status:     defaultStatus(input.Status),
 	}
 
 	id, err := r.q.CreateExpense(context.Background(), params)
@@ -79,6 +80,7 @@ func dbExpenseToModel(e db.GetExpenseWithCategoryByIDRow) models.Expense {
 		Amount:   int(e.Amount),
 		Memo:     memo,
 		SpentAt:  e.SpentAt.Format(time.RFC3339),
+		Status:   e.Status,
 		Category: models.Category{ID: int(e.CategoryID), Name: e.CategoryName},
 	}
 }
@@ -94,6 +96,7 @@ func dbListExpenseRowToModel(e db.ListExpensesRow) models.Expense {
 		Amount:   int(e.Amount),
 		Memo:     memo,
 		SpentAt:  e.SpentAt.Format(time.RFC3339),
+		Status:   e.Status,
 		Category: models.Category{ID: int(e.CategoryID), Name: e.CategoryName},
 	}
 }

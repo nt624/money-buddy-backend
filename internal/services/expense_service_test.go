@@ -192,3 +192,66 @@ func TestCreateExpense_CategoryExistsError(t *testing.T) {
 	}
 	assert.False(t, m.called, "repo should not be called when category existence check fails")
 }
+
+func TestCreateExpense_StatusValidation(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name           string
+		input          models.CreateExpenseInput
+		wantErr        bool
+		wantCalled     bool
+		wantNormalized string
+	}{
+		{
+			name:           "status 'planned' accepted and normalized",
+			input:          models.CreateExpenseInput{Amount: intPtr(100), CategoryID: intPtr(1), SpentAt: "2020-01-02", Status: "PlAnNeD"},
+			wantErr:        false,
+			wantCalled:     true,
+			wantNormalized: "planned",
+		},
+		{
+			name:           "status 'confirmed' accepted",
+			input:          models.CreateExpenseInput{Amount: intPtr(200), CategoryID: intPtr(2), SpentAt: "2020-01-03", Status: "confirmed"},
+			wantErr:        false,
+			wantCalled:     true,
+			wantNormalized: "confirmed",
+		},
+		{
+			name:       "invalid status causes ValidationError",
+			input:      models.CreateExpenseInput{Amount: intPtr(300), CategoryID: intPtr(3), SpentAt: "2020-01-04", Status: "draft"},
+			wantErr:    true,
+			wantCalled: false,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			m := &mockRepo{}
+			exists := map[int32]bool{}
+			if tc.input.CategoryID != nil {
+				exists[int32(*tc.input.CategoryID)] = true
+			}
+			cr := &mockCategoryRepo{exists: exists}
+			s := NewExpenseService(m, cr)
+
+			_, err := s.CreateExpense(tc.input)
+
+			if tc.wantErr {
+				if !assert.Error(t, err) {
+					return
+				}
+				var ve *ValidationError
+				assert.ErrorAs(t, err, &ve)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.wantNormalized, m.in.Status)
+			}
+
+			assert.Equal(t, tc.wantCalled, m.called)
+		})
+	}
+}

@@ -20,6 +20,7 @@ func (r *expenseRepositoryMemory) CreateExpense(input models.CreateExpenseInput)
 		Amount:  *input.Amount,
 		Memo:    input.Memo,
 		SpentAt: input.SpentAt,
+		Status:  defaultStatus(input.Status),
 		Category: models.Category{
 			ID:   *input.CategoryID,
 			Name: "",

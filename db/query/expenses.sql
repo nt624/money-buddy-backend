@@ -3,9 +3,10 @@ INSERT INTO expenses (
   amount,
   category_id,
   memo,
-  spent_at
+  spent_at,
+  status
 ) VALUES (
-  $1, $2, $3, $4
+  $1, $2, $3, $4, $5
 )
 RETURNING id;
 
@@ -15,6 +16,7 @@ SELECT
   e.amount,
   e.memo,
   e.spent_at,
+  e.status,
   c.id AS category_id,
   c.name AS category_name
 FROM expenses e
@@ -27,6 +29,7 @@ SELECT
   e.amount,
   e.memo,
   e.spent_at,
+  e.status,
   c.id AS category_id,
   c.name AS category_name
 FROM expenses e

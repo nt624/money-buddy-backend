@@ -16,9 +16,10 @@ INSERT INTO expenses (
   amount,
   category_id,
   memo,
-  spent_at
+  spent_at,
+  status
 ) VALUES (
-  $1, $2, $3, $4
+  $1, $2, $3, $4, $5
 )
 RETURNING id
 `
@@ -28,6 +29,7 @@ type CreateExpenseParams struct {
 	CategoryID int32
 	Memo       sql.NullString
 	SpentAt    time.Time
+	Status     string
 }
 
 func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (int32, error) {
@@ -36,6 +38,7 @@ func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (i
 		arg.CategoryID,
 		arg.Memo,
 		arg.SpentAt,
+		arg.Status,
 	)
 	var id int32
 	err := row.Scan(&id)
@@ -48,6 +51,7 @@ SELECT
   e.amount,
   e.memo,
   e.spent_at,
+  e.status,
   c.id AS category_id,
   c.name AS category_name
 FROM expenses e
@@ -60,6 +64,7 @@ type GetExpenseWithCategoryByIDRow struct {
 	Amount       int32
 	Memo         sql.NullString
 	SpentAt      time.Time
+	Status       string
 	CategoryID   int32
 	CategoryName string
 }
@@ -72,6 +77,7 @@ func (q *Queries) GetExpenseWithCategoryByID(ctx context.Context, id int32) (Get
 		&i.Amount,
 		&i.Memo,
 		&i.SpentAt,
+		&i.Status,
 		&i.CategoryID,
 		&i.CategoryName,
 	)
@@ -84,6 +90,7 @@ SELECT
   e.amount,
   e.memo,
   e.spent_at,
+  e.status,
   c.id AS category_id,
   c.name AS category_name
 FROM expenses e
@@ -96,6 +103,7 @@ type ListExpensesRow struct {
 	Amount       int32
 	Memo         sql.NullString
 	SpentAt      time.Time
+	Status       string
 	CategoryID   int32
 	CategoryName string
 }
@@ -114,6 +122,7 @@ func (q *Queries) ListExpenses(ctx context.Context) ([]ListExpensesRow, error) {
 			&i.Amount,
 			&i.Memo,
 			&i.SpentAt,
+			&i.Status,
 			&i.CategoryID,
 			&i.CategoryName,
 		); err != nil {

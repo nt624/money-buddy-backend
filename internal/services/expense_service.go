@@ -78,6 +78,16 @@ func (s *expenseService) CreateExpense(input models.CreateExpenseInput) (models.
 		return models.Expense{}, &ValidationError{Message: "memo exceeds maximum length"}
 	}
 
+	// Status の検証（任意入力、指定されている場合のみチェック）
+	if input.Status != "" {
+		lower := strings.ToLower(input.Status)
+		if lower != "planned" && lower != "confirmed" {
+			return models.Expense{}, &ValidationError{Message: "status must be 'planned' or 'confirmed'"}
+		}
+		// 正規化: DB は小文字で扱う前提
+		input.Status = lower
+	}
+
 	// カテゴリ存在チェック（CategoryExists を用いる）
 	exists, err := s.categoryRepo.CategoryExists(context.Background(), int32(*input.CategoryID))
 	if err != nil {

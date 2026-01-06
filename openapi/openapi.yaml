@@ -107,6 +107,9 @@ components:
         spent_at:
           type: string
           format: date
+        status:
+          type: string
+          enum: [planned, confirmed]
         category:
           $ref: '#/components/schemas/Category'
       required:
@@ -114,6 +117,7 @@ components:
         - amount
         - memo
         - spent_at
+        - status
         - category
 
     Category:
@@ -141,6 +145,10 @@ components:
         spent_at:
           type: string
           format: date
+        status:
+          type: string
+          enum: [planned, confirmed]
+          default: confirmed
       required:
         - amount
         - category_id
