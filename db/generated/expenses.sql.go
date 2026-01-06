@@ -42,7 +42,7 @@ func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (i
 	return id, err
 }
 
-const getExpenseByID = `-- name: GetExpenseByID :one
+const getExpenseWithCategoryByID = `-- name: GetExpenseWithCategoryByID :one
 SELECT
   e.id,
   e.amount,
@@ -55,7 +55,7 @@ JOIN categories c ON e.category_id = c.id
 WHERE e.id = $1
 `
 
-type GetExpenseByIDRow struct {
+type GetExpenseWithCategoryByIDRow struct {
 	ID           int32
 	Amount       int32
 	Memo         sql.NullString
@@ -64,9 +64,9 @@ type GetExpenseByIDRow struct {
 	CategoryName string
 }
 
-func (q *Queries) GetExpenseByID(ctx context.Context, id int32) (GetExpenseByIDRow, error) {
-	row := q.db.QueryRowContext(ctx, getExpenseByID, id)
-	var i GetExpenseByIDRow
+func (q *Queries) GetExpenseWithCategoryByID(ctx context.Context, id int32) (GetExpenseWithCategoryByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getExpenseWithCategoryByID, id)
+	var i GetExpenseWithCategoryByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Amount,

@@ -21,7 +21,7 @@ FROM expenses e
 JOIN categories c ON e.category_id = c.id
 ORDER BY spent_at DESC;
 
--- name: GetExpenseByID :one
+-- name: GetExpenseWithCategoryByID :one
 SELECT
   e.id,
   e.amount,

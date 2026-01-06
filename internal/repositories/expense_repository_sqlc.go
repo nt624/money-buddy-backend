@@ -46,7 +46,7 @@ func (r *expenseRepositorySQLC) CreateExpense(input models.CreateExpenseInput) (
 		return models.Expense{}, err
 	}
 
-	row, err := r.q.GetExpenseByID(context.Background(), id)
+	row, err := r.q.GetExpenseWithCategoryByID(context.Background(), id)
 	if err != nil {
 		return models.Expense{}, err
 	}
@@ -68,7 +68,7 @@ func (r *expenseRepositorySQLC) FindAll() ([]models.Expense, error) {
 	return out, nil
 }
 
-func dbExpenseToModel(e db.GetExpenseByIDRow) models.Expense {
+func dbExpenseToModel(e db.GetExpenseWithCategoryByIDRow) models.Expense {
 	memo := ""
 	if e.Memo.Valid {
 		memo = e.Memo.String
