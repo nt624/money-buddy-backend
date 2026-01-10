@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -112,4 +113,102 @@ func (m *mockExpenseServiceValidationErr) ListExpenses() ([]models.Expense, erro
 
 func (m *mockExpenseServiceValidationErr) DeleteExpense(id int) error {
 	return nil
+}
+
+// --- DELETE /expenses/:id handler tests ---
+
+// mock service configurable for DeleteExpense
+type mockExpenseServiceDelete struct {
+	returnErr error
+}
+
+func (m *mockExpenseServiceDelete) CreateExpense(input models.CreateExpenseInput) (models.Expense, error) {
+	return models.Expense{}, nil
+}
+
+func (m *mockExpenseServiceDelete) ListExpenses() ([]models.Expense, error) { return nil, nil }
+
+func (m *mockExpenseServiceDelete) DeleteExpense(id int) error { return m.returnErr }
+
+func TestDeleteExpenseHandler_NoContent(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	svc := &mockExpenseServiceDelete{returnErr: nil}
+	NewExpenseHandler(router, svc)
+
+	req := httptest.NewRequest(http.MethodDelete, "/expenses/123", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusNoContent, w.Code)
+}
+
+func TestDeleteExpenseHandler_InvalidID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	svc := &mockExpenseServiceDelete{returnErr: nil}
+	NewExpenseHandler(router, svc)
+
+	req := httptest.NewRequest(http.MethodDelete, "/expenses/abc", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	var resp map[string]string
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.Equal(t, "invalid expense ID", resp["error"])
+}
+
+func TestDeleteExpenseHandler_ValidationError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	svc := &mockExpenseServiceDelete{returnErr: &services.ValidationError{Message: "cannot delete planned expense"}}
+	NewExpenseHandler(router, svc)
+
+	req := httptest.NewRequest(http.MethodDelete, "/expenses/10", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	var resp map[string]string
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.Equal(t, "cannot delete planned expense", resp["error"])
+}
+
+func TestDeleteExpenseHandler_NotFoundMapsTo500Currently(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	// Current handler maps non-ValidationError to 500
+	svc := &mockExpenseServiceDelete{returnErr: &services.NotFoundError{Message: "expense not found"}}
+	NewExpenseHandler(router, svc)
+
+	req := httptest.NewRequest(http.MethodDelete, "/expenses/9999", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusInternalServerError, w.Code)
+	var resp map[string]string
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.Equal(t, "internal server error", resp["error"])
+}
+
+func TestDeleteExpenseHandler_InternalError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	svc := &mockExpenseServiceDelete{returnErr: errors.New("db down")}
+	NewExpenseHandler(router, svc)
+
+	req := httptest.NewRequest(http.MethodDelete, "/expenses/1", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusInternalServerError, w.Code)
+	var resp map[string]string
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.Equal(t, "internal server error", resp["error"])
 }
