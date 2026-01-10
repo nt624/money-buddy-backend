@@ -40,6 +40,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
+  /expenses/{id}:
+    delete:
+      tags:
+        - "expenses"
+      summary: "Delete an expense"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: "Expense deleted"
+        "400":
+          description: "Invalid ID or validation error"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          description: "Internal Server Error"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     get:
       tags:
         - "expenses"
@@ -106,7 +133,7 @@ components:
           type: string
         spent_at:
           type: string
-          format: date
+          format: date-time
         status:
           type: string
           enum: [planned, confirmed]
@@ -143,8 +170,11 @@ components:
         memo:
           type: string
         spent_at:
-          type: string
-          format: date
+          oneOf:
+            - type: string
+              format: date-time
+            - type: string
+              format: date
         status:
           type: string
           enum: [planned, confirmed]
