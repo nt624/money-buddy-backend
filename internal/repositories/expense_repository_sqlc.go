@@ -100,3 +100,16 @@ func dbListExpenseRowToModel(e db.ListExpensesRow) models.Expense {
 		Category: models.Category{ID: int(e.CategoryID), Name: e.CategoryName},
 	}
 }
+
+func (r *expenseRepositorySQLC) GetExpenseByID(id int32) (models.Expense, error) {
+	row, err := r.q.GetExpenseWithCategoryByID(context.Background(), id)
+	if err != nil {
+		return models.Expense{}, err
+	}
+
+	return dbExpenseToModel(row), nil
+}
+
+func (r *expenseRepositorySQLC) DeleteExpense(id int32) error {
+	return r.q.DeleteExpense(context.Background(), id)
+}

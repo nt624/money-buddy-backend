@@ -6,4 +6,6 @@ import "money-buddy-backend/internal/models"
 type ExpenseRepository interface {
 	CreateExpense(input models.CreateExpenseInput) (models.Expense, error)
 	FindAll() ([]models.Expense, error)
+	GetExpenseByID(id int32) (models.Expense, error)
+	DeleteExpense(id int32) error
 }

@@ -27,6 +27,12 @@ func (m *mockRepo) FindAll() ([]models.Expense, error) {
 	return nil, errors.New("not implemented")
 }
 
+func (m *mockRepo) GetExpenseByID(id int32) (models.Expense, error) {
+	return models.Expense{}, errors.New("not implemented")
+}
+
+func (m *mockRepo) DeleteExpense(id int32) error { return errors.New("not implemented") }
+
 // mockCategoryRepo satisfies CategoryRepository for testing
 type mockCategoryRepo struct {
 	exists map[int32]bool
@@ -170,6 +176,12 @@ func (m *mockRepoErr) CreateExpense(input models.CreateExpenseInput) (models.Exp
 
 func (m *mockRepoErr) FindAll() ([]models.Expense, error) { return nil, errors.New("not implemented") }
 
+func (m *mockRepoErr) GetExpenseByID(id int32) (models.Expense, error) {
+	return models.Expense{}, errors.New("not implemented")
+}
+
+func (m *mockRepoErr) DeleteExpense(id int32) error { return errors.New("not implemented") }
+
 // sqlErrNoRows returns sql.ErrNoRows from database/sql
 func sqlErrNoRows() error { return sql.ErrNoRows }
 
@@ -252,6 +264,96 @@ func TestCreateExpense_StatusValidation(t *testing.T) {
 			}
 
 			assert.Equal(t, tc.wantCalled, m.called)
+		})
+	}
+}
+
+// mockDeleteRepo satisfies repositories.ExpenseRepository and adds DeleteExpense for tests
+type mockDeleteRepo struct {
+	called    bool
+	deletedID int32
+	returnErr error
+}
+
+func (m *mockDeleteRepo) CreateExpense(input models.CreateExpenseInput) (models.Expense, error) {
+	return models.Expense{}, errors.New("not implemented")
+}
+
+func (m *mockDeleteRepo) FindAll() ([]models.Expense, error) {
+	return nil, errors.New("not implemented")
+}
+
+// DeleteExpense is the method under test expectation
+func (m *mockDeleteRepo) DeleteExpense(id int32) error {
+	m.called = true
+	m.deletedID = id
+	return m.returnErr
+}
+
+func (m *mockDeleteRepo) GetExpenseByID(id int32) (models.Expense, error) {
+	// simulate existence: 9999 -> not found, others exist
+	if id == 9999 {
+		return models.Expense{}, sqlErrNoRows()
+	}
+	status := "confirmed"
+	if id == 10 {
+		status = "planned"
+	}
+	return models.Expense{ID: int(id), Status: status}, nil
+}
+
+func TestDeleteExpense_Success(t *testing.T) {
+	t.Parallel()
+
+	repo := &mockDeleteRepo{returnErr: nil}
+	// category repo is unused for delete
+	cr := &mockCategoryRepo{}
+	// Construct concrete service to allow calling DeleteExpense (to be implemented)
+	s := &expenseService{repo: repo, categoryRepo: cr}
+
+	err := s.DeleteExpense(1)
+	assert.NoError(t, err)
+	assert.True(t, repo.called, "repo should be called")
+	assert.Equal(t, int32(1), repo.deletedID)
+}
+
+func TestDeleteExpense_NotFound(t *testing.T) {
+	t.Parallel()
+
+	repo := &mockDeleteRepo{returnErr: sqlErrNoRows()}
+	cr := &mockCategoryRepo{}
+	s := &expenseService{repo: repo, categoryRepo: cr}
+
+	err := s.DeleteExpense(9999)
+	var nfe *NotFoundError
+	if !assert.ErrorAs(t, err, &nfe) {
+		return
+	}
+}
+
+func TestDeleteExpense_StatusAgnostic(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		id   int
+	}{
+		{name: "planned item can delete", id: 10},
+		{name: "confirmed item can delete", id: 11},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			repo := &mockDeleteRepo{returnErr: nil}
+			cr := &mockCategoryRepo{}
+			s := &expenseService{repo: repo, categoryRepo: cr}
+
+			err := s.DeleteExpense(tc.id)
+			assert.NoError(t, err)
+			assert.True(t, repo.called)
+			assert.Equal(t, int32(tc.id), repo.deletedID)
 		})
 	}
 }

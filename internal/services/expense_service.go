@@ -123,3 +123,18 @@ func (s *expenseService) CreateExpense(input models.CreateExpenseInput) (models.
 func (s *expenseService) ListExpenses() ([]models.Expense, error) {
 	return s.repo.FindAll()
 }
+
+func (s *expenseService) DeleteExpense(id int) error {
+	expense, err := s.repo.GetExpenseByID(int32(id))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return &NotFoundError{Message: "expense not found"}
+		}
+		return &InternalError{Message: "internal error"}
+	}
+	if expense == (models.Expense{}) {
+		return &NotFoundError{Message: "expense not found"}
+	}
+
+	return s.repo.DeleteExpense(int32(id))
+}
