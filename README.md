@@ -70,6 +70,139 @@ curl -X POST http://localhost:8080/expenses \
 
 ---
 
+## 更新 API 例（PUT /expenses/:id）
+
+- 経路: `PUT /expenses/:id`
+- 仕様:
+	- `status` は `planned` または `confirmed` のみ有効
+	- 遷移ルール: `confirmed` → `planned` は禁止、`planned` → `confirmed` は許可
+	- `spent_at` は `YYYY-MM-DD` または RFC3339 を受け付けます
+
+リクエスト例:
+
+```bash
+curl -X PUT http://localhost:8080/expenses/42 \
+	-H "Content-Type: application/json" \
+	-d '{
+		"amount": 700,
+		"category_id": 5,
+		"memo": "updated",
+		"spent_at": "2025-07-01",
+		"status": "confirmed"
+	}'
+```
+
+成功レスポンス（200）例:
+
+```json
+{
+	"expense": {
+		"id": 42,
+		"amount": 700,
+		"memo": "updated",
+		"spent_at": "2025-07-01",
+		"status": "confirmed",
+		"category": { "id": 5 }
+	}
+}
+```
+
+エラーレスポンス例:
+- バリデーションエラー（400）: `{ "error": "amount must be greater than 0" }`
+- ステータス遷移エラー（409）: `{ "error": "invalid status transition" }`
+- 内部エラー（500）: `{ "error": "internal server error" }`
+
+---
+
+## 一覧 API 例（GET /expenses）
+
+- 経路: `GET /expenses`
+- レスポンスは `expenses` 配列を含むオブジェクト
+
+リクエスト例:
+
+```bash
+curl -X GET http://localhost:8080/expenses
+```
+
+成功レスポンス（200）例:
+
+```json
+{
+	"expenses": [
+		{
+			"id": 1,
+			"amount": 1500,
+			"memo": "食費",
+			"spent_at": "2025-01-03T00:00:00Z",
+			"status": "confirmed",
+			"category": { "id": 2, "name": "food" }
+		}
+	]
+}
+```
+
+---
+
+## 作成 API 例（POST /expenses）
+
+- 経路: `POST /expenses`
+- `status` は省略可能（省略時は `confirmed` が適用）。有効値は `planned`/`confirmed`
+
+リクエスト例:
+
+```bash
+curl -X POST http://localhost:8080/expenses \
+	-H "Content-Type: application/json" \
+	-d '{
+		"amount": 1500,
+		"category_id": 2,
+		"memo": "食費",
+		"spent_at": "2025-01-03",
+		"status": "planned"
+	}'
+```
+
+成功レスポンス（201）例:
+
+```json
+{
+	"expense": {
+		"id": 1,
+		"amount": 1500,
+		"memo": "食費",
+		"spent_at": "2025-01-03",
+		"status": "planned",
+		"category": { "id": 2 }
+	}
+}
+```
+
+エラーレスポンス例:
+- バリデーションエラー（400）: `{ "error": "amount must be greater than 0" }`
+- 内部エラー（500）: `{ "error": "internal server error" }`
+
+---
+
+## 削除 API 例（DELETE /expenses/:id）
+
+- 経路: `DELETE /expenses/:id`
+- 成功時はボディなしで `204 No Content`
+
+リクエスト例:
+
+```bash
+curl -X DELETE http://localhost:8080/expenses/123
+```
+
+レスポンス例:
+- 成功（204）: ボディなし
+- ID不正（400）: `{ "error": "invalid expense ID" }`
+- バリデーションエラー（400）: `{ "error": "cannot delete planned expense" }`
+- 内部エラー（500）: `{ "error": "internal server error" }`
+
+---
+
 ## CI の推奨ステップ（例: GitHub Actions）
 
 ワークフロー内に必ず `sqlc generate`（または生成済みの検証）を含めてください。例:

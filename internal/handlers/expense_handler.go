@@ -20,6 +20,7 @@ func NewExpenseHandler(r *gin.Engine, service services.ExpenseService) {
 
 	r.POST("/expenses", handler.CreateExpense)
 	r.GET("/expenses", handler.ListExpenses)
+	r.PUT("/expenses/:id", handler.UpdateExpense)
 	r.DELETE("/expenses/:id", handler.DeleteExpense)
 }
 
@@ -74,4 +75,58 @@ func (h *ExpenseHandler) DeleteExpense(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+// UpdateExpense handles PUT /expenses/:id to update an expense.
+func (h *ExpenseHandler) UpdateExpense(c *gin.Context) {
+	// Path param ID
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid expense ID"})
+		return
+	}
+
+	// Bind JSON body without ID (ID comes from path)
+	type updateBody struct {
+		Amount     *int   `json:"amount" binding:"required"`
+		CategoryID *int   `json:"category_id" binding:"required"`
+		Memo       string `json:"memo"`
+		SpentAt    string `json:"spent_at" binding:"required"`
+		Status     string `json:"status"`
+	}
+	var body updateBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Build service input
+	input := models.UpdateExpenseInput{
+		ID:         int(id),
+		Amount:     body.Amount,
+		CategoryID: body.CategoryID,
+		Memo:       body.Memo,
+		SpentAt:    body.SpentAt,
+		Status:     body.Status,
+	}
+
+	exp, err := h.service.UpdateExpense(input)
+	if err != nil {
+		// Validation errors -> 400
+		var ve *services.ValidationError
+		if errors.As(err, &ve) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": ve.Message})
+			return
+		}
+		// Status transition error -> 409
+		if errors.Is(err, services.ErrInvalidStatusTransition) {
+			c.JSON(http.StatusConflict, gin.H{"error": "invalid status transition"})
+			return
+		}
+		// Others -> 500
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"expense": exp})
 }
