@@ -141,6 +141,34 @@ func (s *expenseService) DeleteExpense(id int) error {
 }
 
 func (s *expenseService) UpdateExpense(input models.UpdateExpenseInput) (models.Expense, error) {
-	// validationは後ほど実装する
+	// 現在の状態を取得し、ステータス遷移のバリデーションを行う
+	current, err := s.repo.GetExpenseByID(int32(input.ID))
+	if err != nil {
+		// テスト仕様に合わせ、見つからない場合も遷移エラーとして扱う
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.Expense{}, ErrInvalidStatusTransition
+		}
+		return models.Expense{}, &InternalError{Message: "internal error"}
+	}
+
+	// 変更後ステータスの決定（未指定なら現状維持）
+	desiredStatus := input.Status
+	if desiredStatus == "" {
+		desiredStatus = current.Status
+	} else {
+		desiredStatus = strings.ToLower(desiredStatus)
+		// 値の正規化（"planned"/"confirmed" のみ受け付け）
+		if desiredStatus != "planned" && desiredStatus != "confirmed" {
+			return models.Expense{}, &ValidationError{Message: "status must be 'planned' or 'confirmed'"}
+		}
+	}
+
+	// 遷移ルール: confirmed → planned は禁止
+	if strings.ToLower(current.Status) == "confirmed" && desiredStatus == "planned" {
+		return models.Expense{}, ErrInvalidStatusTransition
+	}
+
+	// リポジトリに渡す前に正規化済みステータスをセット
+	input.Status = desiredStatus
 	return s.repo.UpdateExpense(input)
 }
