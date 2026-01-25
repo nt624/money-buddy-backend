@@ -16,8 +16,8 @@ const (
 	BusinessMaxAmount = 1000000000
 	// MemoMaxLen はメモの最大長
 	MemoMaxLen = 5000
-	// DummyUserID は認証実装までの仮ユーザーID
-	// TODO: 認証middleware実装時に削除し、実際のユーザーIDを使用すること
+	// DummyUserID is a placeholder user ID used until authentication is implemented
+	// TODO: Remove this constant and use actual user ID from authentication middleware
 	DummyUserID = "dummy-user"
 )
 
