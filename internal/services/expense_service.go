@@ -16,6 +16,9 @@ const (
 	BusinessMaxAmount = 1000000000
 	// MemoMaxLen はメモの最大長
 	MemoMaxLen = 5000
+	// DummyUserID は認証実装までの仮ユーザーID
+	// TODO: 認証middleware実装時に削除し、実際のユーザーIDを使用すること
+	DummyUserID = "dummy-user"
 )
 
 type ExpenseService interface {
@@ -100,7 +103,7 @@ func (s *expenseService) CreateExpense(input models.CreateExpenseInput) (models.
 		return models.Expense{}, &ValidationError{Message: "category_id is invalid"}
 	}
 
-	exp, err := s.repo.CreateExpense(input)
+	exp, err := s.repo.CreateExpense(DummyUserID, input)
 	if err != nil {
 		// sql.ErrNoRows -> NotFoundError
 		if errors.Is(err, sql.ErrNoRows) {
@@ -123,11 +126,11 @@ func (s *expenseService) CreateExpense(input models.CreateExpenseInput) (models.
 }
 
 func (s *expenseService) ListExpenses() ([]models.Expense, error) {
-	return s.repo.FindAll()
+	return s.repo.FindAll(DummyUserID)
 }
 
 func (s *expenseService) DeleteExpense(id int) error {
-	expense, err := s.repo.GetExpenseByID(int32(id))
+	expense, err := s.repo.GetExpenseByID(DummyUserID, int32(id))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return &NotFoundError{Message: "expense not found"}
@@ -138,12 +141,12 @@ func (s *expenseService) DeleteExpense(id int) error {
 		return &NotFoundError{Message: "expense not found"}
 	}
 
-	return s.repo.DeleteExpense(int32(id))
+	return s.repo.DeleteExpense(DummyUserID, int32(id))
 }
 
 func (s *expenseService) UpdateExpense(input models.UpdateExpenseInput) (models.Expense, error) {
 	// 現在の状態を取得し、ステータス遷移のバリデーションを行う
-	current, err := s.repo.GetExpenseByID(int32(input.ID))
+	current, err := s.repo.GetExpenseByID(DummyUserID, int32(input.ID))
 	if err != nil {
 		// テスト仕様に合わせ、見つからない場合も遷移エラーとして扱う
 		if errors.Is(err, sql.ErrNoRows) {
@@ -171,5 +174,5 @@ func (s *expenseService) UpdateExpense(input models.UpdateExpenseInput) (models.
 
 	// リポジトリに渡す前に正規化済みステータスをセット
 	input.Status = desiredStatus
-	return s.repo.UpdateExpense(input)
+	return s.repo.UpdateExpense(DummyUserID, input)
 }

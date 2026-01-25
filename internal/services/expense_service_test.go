@@ -17,23 +17,23 @@ type mockRepo struct {
 	in     models.CreateExpenseInput
 }
 
-func (m *mockRepo) CreateExpense(input models.CreateExpenseInput) (models.Expense, error) {
+func (m *mockRepo) CreateExpense(userID string, input models.CreateExpenseInput) (models.Expense, error) {
 	m.called = true
 	m.in = input
 	return models.Expense{ID: 1, Amount: *input.Amount, Memo: input.Memo, SpentAt: input.SpentAt, Category: models.Category{ID: *input.CategoryID, Name: ""}}, nil
 }
 
-func (m *mockRepo) FindAll() ([]models.Expense, error) {
+func (m *mockRepo) FindAll(userID string) ([]models.Expense, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (m *mockRepo) GetExpenseByID(id int32) (models.Expense, error) {
+func (m *mockRepo) GetExpenseByID(userID string, id int32) (models.Expense, error) {
 	return models.Expense{}, errors.New("not implemented")
 }
 
-func (m *mockRepo) DeleteExpense(id int32) error { return errors.New("not implemented") }
+func (m *mockRepo) DeleteExpense(userID string, id int32) error { return errors.New("not implemented") }
 
-func (m *mockRepo) UpdateExpense(input models.UpdateExpenseInput) (models.Expense, error) {
+func (m *mockRepo) UpdateExpense(userID string, input models.UpdateExpenseInput) (models.Expense, error) {
 	return models.Expense{}, errors.New("not implemented")
 }
 
@@ -174,19 +174,19 @@ type mockRepoErr struct {
 	returnErr error
 }
 
-func (m *mockRepoErr) CreateExpense(input models.CreateExpenseInput) (models.Expense, error) {
+func (m *mockRepoErr) CreateExpense(userID string, input models.CreateExpenseInput) (models.Expense, error) {
 	return models.Expense{}, m.returnErr
 }
 
-func (m *mockRepoErr) FindAll() ([]models.Expense, error) { return nil, errors.New("not implemented") }
+func (m *mockRepoErr) FindAll(userID string) ([]models.Expense, error) { return nil, errors.New("not implemented") }
 
-func (m *mockRepoErr) GetExpenseByID(id int32) (models.Expense, error) {
+func (m *mockRepoErr) GetExpenseByID(userID string, id int32) (models.Expense, error) {
 	return models.Expense{}, errors.New("not implemented")
 }
 
-func (m *mockRepoErr) DeleteExpense(id int32) error { return errors.New("not implemented") }
+func (m *mockRepoErr) DeleteExpense(userID string, id int32) error { return errors.New("not implemented") }
 
-func (m *mockRepoErr) UpdateExpense(input models.UpdateExpenseInput) (models.Expense, error) {
+func (m *mockRepoErr) UpdateExpense(userID string, input models.UpdateExpenseInput) (models.Expense, error) {
 	return models.Expense{}, errors.New("not implemented")
 }
 
@@ -283,26 +283,26 @@ type mockDeleteRepo struct {
 	returnErr error
 }
 
-func (m *mockDeleteRepo) CreateExpense(input models.CreateExpenseInput) (models.Expense, error) {
+func (m *mockDeleteRepo) CreateExpense(userID string, input models.CreateExpenseInput) (models.Expense, error) {
 	return models.Expense{}, errors.New("not implemented")
 }
 
-func (m *mockDeleteRepo) FindAll() ([]models.Expense, error) {
+func (m *mockDeleteRepo) FindAll(userID string) ([]models.Expense, error) {
 	return nil, errors.New("not implemented")
 }
 
 // DeleteExpense is the method under test expectation
-func (m *mockDeleteRepo) DeleteExpense(id int32) error {
+func (m *mockDeleteRepo) DeleteExpense(userID string, id int32) error {
 	m.called = true
 	m.deletedID = id
 	return m.returnErr
 }
 
-func (m *mockDeleteRepo) UpdateExpense(input models.UpdateExpenseInput) (models.Expense, error) {
+func (m *mockDeleteRepo) UpdateExpense(userID string, input models.UpdateExpenseInput) (models.Expense, error) {
 	return models.Expense{}, errors.New("not implemented")
 }
 
-func (m *mockDeleteRepo) GetExpenseByID(id int32) (models.Expense, error) {
+func (m *mockDeleteRepo) GetExpenseByID(userID string, id int32) (models.Expense, error) {
 	// simulate existence: 9999 -> not found, others exist
 	if id == 9999 {
 		return models.Expense{}, sqlErrNoRows()
@@ -379,25 +379,25 @@ type mockUpdateRepo struct {
 	getErr    error
 }
 
-func (m *mockUpdateRepo) CreateExpense(input models.CreateExpenseInput) (models.Expense, error) {
+func (m *mockUpdateRepo) CreateExpense(userID string, input models.CreateExpenseInput) (models.Expense, error) {
 	return models.Expense{}, errors.New("not implemented")
 }
 
-func (m *mockUpdateRepo) FindAll() ([]models.Expense, error) {
+func (m *mockUpdateRepo) FindAll(userID string) ([]models.Expense, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (m *mockUpdateRepo) GetExpenseByID(id int32) (models.Expense, error) {
+func (m *mockUpdateRepo) GetExpenseByID(userID string, id int32) (models.Expense, error) {
 	if m.getErr != nil {
 		return models.Expense{}, m.getErr
 	}
 	return m.current, nil
 }
 
-func (m *mockUpdateRepo) DeleteExpense(id int32) error { return errors.New("not implemented") }
+func (m *mockUpdateRepo) DeleteExpense(userID string, id int32) error { return errors.New("not implemented") }
 
 // UpdateExpense updates fields; if Status is empty, keep current status
-func (m *mockUpdateRepo) UpdateExpense(input models.UpdateExpenseInput) (models.Expense, error) {
+func (m *mockUpdateRepo) UpdateExpense(userID string, input models.UpdateExpenseInput) (models.Expense, error) {
 	m.called = true
 	m.in = input
 	if m.returnErr != nil {
