@@ -1,5 +1,6 @@
 CREATE TABLE expenses (
   id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
   amount INTEGER NOT NULL,
   category_id INTEGER NOT NULL,
   memo TEXT,
