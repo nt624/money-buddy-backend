@@ -25,3 +25,20 @@ type Expense struct {
 	CreatedAt  time.Time
 	UpdateAt   time.Time
 }
+
+type FixedCost struct {
+	ID        int32
+	UserID    string
+	Name      string
+	Amount    int32
+	CreatedAt sql.NullTime
+	UpdatedAt sql.NullTime
+}
+
+type User struct {
+	ID         string
+	Income     int32
+	SavingGoal int32
+	CreatedAt  sql.NullTime
+	UpdatedAt  sql.NullTime
+}
