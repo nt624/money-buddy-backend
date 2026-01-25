@@ -91,7 +91,7 @@ func TestCreateExpenseValidation(t *testing.T) {
 			cr := &mockCategoryRepo{exists: exists}
 			s := NewExpenseService(m, cr)
 
-			out, err := s.CreateExpense(tc.input)
+			out, err := s.CreateExpense("test-user", tc.input)
 
 			if tc.wantErr {
 				if !assert.Error(t, err, "expected error for case %s", tc.name) {
@@ -137,7 +137,7 @@ func TestCreateExpense_DBErrorMapping(t *testing.T) {
 			cr := &mockCategoryRepo{exists: map[int32]bool{1: true}}
 			s := NewExpenseService(m, cr)
 
-			_, err := s.CreateExpense(validInput)
+			_, err := s.CreateExpense("test-user", validInput)
 			if !assert.Error(t, err) {
 				return
 			}
@@ -202,7 +202,7 @@ func TestCreateExpense_CategoryExistsError(t *testing.T) {
 	cr := &mockCategoryRepo{err: errors.New("db error")}
 	s := NewExpenseService(m, cr)
 
-	_, err := s.CreateExpense(input)
+	_, err := s.CreateExpense("test-user", input)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -258,7 +258,7 @@ func TestCreateExpense_StatusValidation(t *testing.T) {
 			cr := &mockCategoryRepo{exists: exists}
 			s := NewExpenseService(m, cr)
 
-			_, err := s.CreateExpense(tc.input)
+			_, err := s.CreateExpense("test-user", tc.input)
 
 			if tc.wantErr {
 				if !assert.Error(t, err) {
@@ -323,7 +323,7 @@ func TestDeleteExpense_Success(t *testing.T) {
 	// Construct concrete service to allow calling DeleteExpense (to be implemented)
 	s := &expenseService{repo: repo, categoryRepo: cr}
 
-	err := s.DeleteExpense(1)
+	err := s.DeleteExpense("test-user", 1)
 	assert.NoError(t, err)
 	assert.True(t, repo.called, "repo should be called")
 	assert.Equal(t, int32(1), repo.deletedID)
@@ -336,7 +336,7 @@ func TestDeleteExpense_NotFound(t *testing.T) {
 	cr := &mockCategoryRepo{}
 	s := &expenseService{repo: repo, categoryRepo: cr}
 
-	err := s.DeleteExpense(9999)
+	err := s.DeleteExpense("test-user", 9999)
 	var nfe *NotFoundError
 	if !assert.ErrorAs(t, err, &nfe) {
 		return
@@ -362,7 +362,7 @@ func TestDeleteExpense_StatusAgnostic(t *testing.T) {
 			cr := &mockCategoryRepo{}
 			s := &expenseService{repo: repo, categoryRepo: cr}
 
-			err := s.DeleteExpense(tc.id)
+			err := s.DeleteExpense("test-user", tc.id)
 			assert.NoError(t, err)
 			assert.True(t, repo.called)
 			assert.Equal(t, int32(tc.id), repo.deletedID)
@@ -438,7 +438,7 @@ func TestUpdateExpense_NormalCases(t *testing.T) {
 			SpentAt:    "2025-02-01",
 			Status:     "confirmed",
 		}
-		out, err := s.UpdateExpense(input)
+		out, err := s.UpdateExpense("test-user", input)
 
 		assert.NoError(t, err)
 		assert.True(t, repo.called)
@@ -465,7 +465,7 @@ func TestUpdateExpense_NormalCases(t *testing.T) {
 			SpentAt:    "2025-03-15",
 			Status:     "", // no change
 		}
-		out, err := s.UpdateExpense(input)
+		out, err := s.UpdateExpense("test-user", input)
 
 		assert.NoError(t, err)
 		assert.True(t, repo.called)
@@ -492,7 +492,7 @@ func TestUpdateExpense_NormalCases(t *testing.T) {
 			SpentAt:    "2025-04-10",
 			Status:     "", // no change
 		}
-		out, err := s.UpdateExpense(input)
+		out, err := s.UpdateExpense("test-user", input)
 
 		assert.NoError(t, err)
 		assert.True(t, repo.called)
@@ -520,7 +520,7 @@ func TestUpdateExpense_InvalidTransition_ConfirmedToPlanned(t *testing.T) {
 		Status:     "planned",
 	}
 
-	_, err := s.UpdateExpense(input)
+	_, err := s.UpdateExpense("test-user", input)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -548,7 +548,7 @@ func TestUpdateExpense_NotFound(t *testing.T) {
 		Status:     "planned",
 	}
 
-	_, err := s.UpdateExpense(input)
+	_, err := s.UpdateExpense("test-user", input)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
