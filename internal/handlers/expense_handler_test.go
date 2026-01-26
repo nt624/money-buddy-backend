@@ -18,33 +18,33 @@ import (
 // expenseServiceMock is a unified mock implementing services.ExpenseService
 // with configurable function fields for each method.
 type expenseServiceMock struct {
-	CreateExpenseFunc func(models.CreateExpenseInput) (models.Expense, error)
-	ListExpensesFunc  func() ([]models.Expense, error)
-	DeleteExpenseFunc func(int) error
-	UpdateExpenseFunc func(models.UpdateExpenseInput) (models.Expense, error)
+	CreateExpenseFunc func(userID string, input models.CreateExpenseInput) (models.Expense, error)
+	ListExpensesFunc  func(userID string) ([]models.Expense, error)
+	DeleteExpenseFunc func(userID string, id int) error
+	UpdateExpenseFunc func(userID string, input models.UpdateExpenseInput) (models.Expense, error)
 }
 
-func (m *expenseServiceMock) CreateExpense(input models.CreateExpenseInput) (models.Expense, error) {
+func (m *expenseServiceMock) CreateExpense(userID string, input models.CreateExpenseInput) (models.Expense, error) {
 	if m.CreateExpenseFunc != nil {
-		return m.CreateExpenseFunc(input)
+		return m.CreateExpenseFunc(userID, input)
 	}
 	return models.Expense{}, nil
 }
-func (m *expenseServiceMock) ListExpenses() ([]models.Expense, error) {
+func (m *expenseServiceMock) ListExpenses(userID string) ([]models.Expense, error) {
 	if m.ListExpensesFunc != nil {
-		return m.ListExpensesFunc()
+		return m.ListExpensesFunc(userID)
 	}
 	return nil, nil
 }
-func (m *expenseServiceMock) DeleteExpense(id int) error {
+func (m *expenseServiceMock) DeleteExpense(userID string, id int) error {
 	if m.DeleteExpenseFunc != nil {
-		return m.DeleteExpenseFunc(id)
+		return m.DeleteExpenseFunc(userID, id)
 	}
 	return nil
 }
-func (m *expenseServiceMock) UpdateExpense(input models.UpdateExpenseInput) (models.Expense, error) {
+func (m *expenseServiceMock) UpdateExpense(userID string, input models.UpdateExpenseInput) (models.Expense, error) {
 	if m.UpdateExpenseFunc != nil {
-		return m.UpdateExpenseFunc(input)
+		return m.UpdateExpenseFunc(userID, input)
 	}
 	return models.Expense{}, nil
 }
@@ -54,7 +54,7 @@ func TestCreateExpenseHandler_Created(t *testing.T) {
 	router := gin.New()
 
 	svc := &expenseServiceMock{
-		CreateExpenseFunc: func(input models.CreateExpenseInput) (models.Expense, error) {
+		CreateExpenseFunc: func(userID string, input models.CreateExpenseInput) (models.Expense, error) {
 			return models.Expense{
 				ID:       1,
 				Amount:   *input.Amount,
@@ -98,7 +98,7 @@ func TestCreateExpenseHandler_ValidationError(t *testing.T) {
 
 	// mock service that returns ValidationError
 	svc := &expenseServiceMock{
-		CreateExpenseFunc: func(input models.CreateExpenseInput) (models.Expense, error) {
+		CreateExpenseFunc: func(userID string, input models.CreateExpenseInput) (models.Expense, error) {
 			return models.Expense{}, &services.ValidationError{Message: "amount must be greater than 0"}
 		},
 	}
@@ -136,53 +136,53 @@ type mockExpenseServiceUpdateSuccess struct {
 	ret models.Expense
 }
 
-func (m *mockExpenseServiceUpdateSuccess) CreateExpense(input models.CreateExpenseInput) (models.Expense, error) {
+func (m *mockExpenseServiceUpdateSuccess) CreateExpense(userID string, input models.CreateExpenseInput) (models.Expense, error) {
 	return models.Expense{}, nil
 }
-func (m *mockExpenseServiceUpdateSuccess) ListExpenses() ([]models.Expense, error) {
+func (m *mockExpenseServiceUpdateSuccess) ListExpenses(userID string) ([]models.Expense, error) {
 	return nil, nil
 }
-func (m *mockExpenseServiceUpdateSuccess) DeleteExpense(id int) error { return nil }
-func (m *mockExpenseServiceUpdateSuccess) UpdateExpense(input models.UpdateExpenseInput) (models.Expense, error) {
+func (m *mockExpenseServiceUpdateSuccess) DeleteExpense(userID string, id int) error { return nil }
+func (m *mockExpenseServiceUpdateSuccess) UpdateExpense(userID string, input models.UpdateExpenseInput) (models.Expense, error) {
 	return m.ret, nil
 }
 
 type mockExpenseServiceUpdateValidationErr struct{ msg string }
 
-func (m *mockExpenseServiceUpdateValidationErr) CreateExpense(input models.CreateExpenseInput) (models.Expense, error) {
+func (m *mockExpenseServiceUpdateValidationErr) CreateExpense(userID string, input models.CreateExpenseInput) (models.Expense, error) {
 	return models.Expense{}, nil
 }
-func (m *mockExpenseServiceUpdateValidationErr) ListExpenses() ([]models.Expense, error) {
+func (m *mockExpenseServiceUpdateValidationErr) ListExpenses(userID string) ([]models.Expense, error) {
 	return nil, nil
 }
-func (m *mockExpenseServiceUpdateValidationErr) DeleteExpense(id int) error { return nil }
-func (m *mockExpenseServiceUpdateValidationErr) UpdateExpense(input models.UpdateExpenseInput) (models.Expense, error) {
+func (m *mockExpenseServiceUpdateValidationErr) DeleteExpense(userID string, id int) error { return nil }
+func (m *mockExpenseServiceUpdateValidationErr) UpdateExpense(userID string, input models.UpdateExpenseInput) (models.Expense, error) {
 	return models.Expense{}, &services.ValidationError{Message: m.msg}
 }
 
 type mockExpenseServiceUpdateTransitionErr struct{}
 
-func (m *mockExpenseServiceUpdateTransitionErr) CreateExpense(input models.CreateExpenseInput) (models.Expense, error) {
+func (m *mockExpenseServiceUpdateTransitionErr) CreateExpense(userID string, input models.CreateExpenseInput) (models.Expense, error) {
 	return models.Expense{}, nil
 }
-func (m *mockExpenseServiceUpdateTransitionErr) ListExpenses() ([]models.Expense, error) {
+func (m *mockExpenseServiceUpdateTransitionErr) ListExpenses(userID string) ([]models.Expense, error) {
 	return nil, nil
 }
-func (m *mockExpenseServiceUpdateTransitionErr) DeleteExpense(id int) error { return nil }
-func (m *mockExpenseServiceUpdateTransitionErr) UpdateExpense(input models.UpdateExpenseInput) (models.Expense, error) {
+func (m *mockExpenseServiceUpdateTransitionErr) DeleteExpense(userID string, id int) error { return nil }
+func (m *mockExpenseServiceUpdateTransitionErr) UpdateExpense(userID string, input models.UpdateExpenseInput) (models.Expense, error) {
 	return models.Expense{}, services.ErrInvalidStatusTransition
 }
 
 type mockExpenseServiceUpdateInternalErr struct{ err error }
 
-func (m *mockExpenseServiceUpdateInternalErr) CreateExpense(input models.CreateExpenseInput) (models.Expense, error) {
+func (m *mockExpenseServiceUpdateInternalErr) CreateExpense(userID string, input models.CreateExpenseInput) (models.Expense, error) {
 	return models.Expense{}, nil
 }
-func (m *mockExpenseServiceUpdateInternalErr) ListExpenses() ([]models.Expense, error) {
+func (m *mockExpenseServiceUpdateInternalErr) ListExpenses(userID string) ([]models.Expense, error) {
 	return nil, nil
 }
-func (m *mockExpenseServiceUpdateInternalErr) DeleteExpense(id int) error { return nil }
-func (m *mockExpenseServiceUpdateInternalErr) UpdateExpense(input models.UpdateExpenseInput) (models.Expense, error) {
+func (m *mockExpenseServiceUpdateInternalErr) DeleteExpense(userID string, id int) error { return nil }
+func (m *mockExpenseServiceUpdateInternalErr) UpdateExpense(userID string, input models.UpdateExpenseInput) (models.Expense, error) {
 	return models.Expense{}, m.err
 }
 
@@ -317,7 +317,7 @@ func TestDeleteExpenseHandler_NoContent(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	svc := &expenseServiceMock{DeleteExpenseFunc: func(id int) error { return nil }}
+	svc := &expenseServiceMock{DeleteExpenseFunc: func(userID string, id int) error { return nil }}
 	NewExpenseHandler(router, svc)
 
 	req := httptest.NewRequest(http.MethodDelete, "/expenses/123", nil)
@@ -331,7 +331,7 @@ func TestDeleteExpenseHandler_InvalidID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	svc := &expenseServiceMock{DeleteExpenseFunc: func(id int) error { return nil }}
+	svc := &expenseServiceMock{DeleteExpenseFunc: func(userID string, id int) error { return nil }}
 	NewExpenseHandler(router, svc)
 
 	req := httptest.NewRequest(http.MethodDelete, "/expenses/abc", nil)
@@ -348,7 +348,7 @@ func TestDeleteExpenseHandler_ValidationError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	svc := &expenseServiceMock{DeleteExpenseFunc: func(id int) error { return &services.ValidationError{Message: "cannot delete planned expense"} }}
+	svc := &expenseServiceMock{DeleteExpenseFunc: func(userID string, id int) error { return &services.ValidationError{Message: "cannot delete planned expense"} }}
 	NewExpenseHandler(router, svc)
 
 	req := httptest.NewRequest(http.MethodDelete, "/expenses/10", nil)
@@ -366,7 +366,7 @@ func TestDeleteExpenseHandler_NotFoundMapsTo500Currently(t *testing.T) {
 	router := gin.New()
 
 	// Current handler maps non-ValidationError to 500
-	svc := &expenseServiceMock{DeleteExpenseFunc: func(id int) error { return &services.NotFoundError{Message: "expense not found"} }}
+	svc := &expenseServiceMock{DeleteExpenseFunc: func(userID string, id int) error { return &services.NotFoundError{Message: "expense not found"} }}
 	NewExpenseHandler(router, svc)
 
 	req := httptest.NewRequest(http.MethodDelete, "/expenses/9999", nil)
@@ -383,7 +383,7 @@ func TestDeleteExpenseHandler_InternalError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	svc := &expenseServiceMock{DeleteExpenseFunc: func(id int) error { return errors.New("db down") }}
+	svc := &expenseServiceMock{DeleteExpenseFunc: func(userID string, id int) error { return errors.New("db down") }}
 	NewExpenseHandler(router, svc)
 
 	req := httptest.NewRequest(http.MethodDelete, "/expenses/1", nil)
@@ -405,7 +405,7 @@ func TestUpdateExpenseHandler_Cases(t *testing.T) {
 		name       string
 		path       string
 		body       string
-		mockUpdate func(models.UpdateExpenseInput) (models.Expense, error)
+		mockUpdate func(userID string, in models.UpdateExpenseInput) (models.Expense, error)
 		wantStatus int
 		checkBody  func(t *testing.T, w *httptest.ResponseRecorder)
 	}{
@@ -413,7 +413,7 @@ func TestUpdateExpenseHandler_Cases(t *testing.T) {
 			name: "success",
 			path: "/expenses/42",
 			body: `{"amount":700,"category_id":5,"memo":"updated","spent_at":"2025-07-01","status":"confirmed"}`,
-			mockUpdate: func(in models.UpdateExpenseInput) (models.Expense, error) {
+			mockUpdate: func(userID string, in models.UpdateExpenseInput) (models.Expense, error) {
 				return models.Expense{ID: 42, Amount: 700, Memo: "updated", SpentAt: "2025-07-01", Status: "confirmed", Category: models.Category{ID: 5}}, nil
 			},
 			wantStatus: http.StatusOK,
@@ -433,7 +433,7 @@ func TestUpdateExpenseHandler_Cases(t *testing.T) {
 			name: "invalid json",
 			path: "/expenses/1",
 			body: `{"memo":"x"}`,
-			mockUpdate: func(in models.UpdateExpenseInput) (models.Expense, error) {
+			mockUpdate: func(userID string, in models.UpdateExpenseInput) (models.Expense, error) {
 				return models.Expense{}, nil
 			},
 			wantStatus: http.StatusBadRequest,
@@ -442,7 +442,7 @@ func TestUpdateExpenseHandler_Cases(t *testing.T) {
 			name: "validation error",
 			path: "/expenses/1",
 			body: `{"amount":100,"category_id":2,"memo":"x","spent_at":"2025-01-01"}`,
-			mockUpdate: func(in models.UpdateExpenseInput) (models.Expense, error) {
+			mockUpdate: func(userID string, in models.UpdateExpenseInput) (models.Expense, error) {
 				return models.Expense{}, &services.ValidationError{Message: "amount must be greater than 0"}
 			},
 			wantStatus: http.StatusBadRequest,
@@ -451,7 +451,7 @@ func TestUpdateExpenseHandler_Cases(t *testing.T) {
 			name: "status transition conflict",
 			path: "/expenses/1",
 			body: `{"amount":100,"category_id":1,"memo":"x","spent_at":"2025-01-01","status":"planned"}`,
-			mockUpdate: func(in models.UpdateExpenseInput) (models.Expense, error) {
+			mockUpdate: func(userID string, in models.UpdateExpenseInput) (models.Expense, error) {
 				return models.Expense{}, services.ErrInvalidStatusTransition
 			},
 			wantStatus: http.StatusConflict,
@@ -460,7 +460,7 @@ func TestUpdateExpenseHandler_Cases(t *testing.T) {
 			name: "internal error",
 			path: "/expenses/1",
 			body: `{"amount":100,"category_id":1,"memo":"x","spent_at":"2025-01-01"}`,
-			mockUpdate: func(in models.UpdateExpenseInput) (models.Expense, error) {
+			mockUpdate: func(userID string, in models.UpdateExpenseInput) (models.Expense, error) {
 				return models.Expense{}, errors.New("db down")
 			},
 			wantStatus: http.StatusInternalServerError,
@@ -469,7 +469,7 @@ func TestUpdateExpenseHandler_Cases(t *testing.T) {
 			name:       "invalid id",
 			path:       "/expenses/abc",
 			body:       `{"amount":100,"category_id":1,"memo":"x","spent_at":"2025-01-01"}`,
-			mockUpdate: func(in models.UpdateExpenseInput) (models.Expense, error) { return models.Expense{}, nil },
+			mockUpdate: func(userID string, in models.UpdateExpenseInput) (models.Expense, error) { return models.Expense{}, nil },
 			wantStatus: http.StatusBadRequest,
 		},
 	}

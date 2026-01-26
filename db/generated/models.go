@@ -17,6 +17,7 @@ type Category struct {
 
 type Expense struct {
 	ID         int32
+	UserID     string
 	Amount     int32
 	CategoryID int32
 	Memo       sql.NullString

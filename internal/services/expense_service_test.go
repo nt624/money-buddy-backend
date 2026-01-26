@@ -17,23 +17,23 @@ type mockRepo struct {
 	in     models.CreateExpenseInput
 }
 
-func (m *mockRepo) CreateExpense(input models.CreateExpenseInput) (models.Expense, error) {
+func (m *mockRepo) CreateExpense(userID string, input models.CreateExpenseInput) (models.Expense, error) {
 	m.called = true
 	m.in = input
 	return models.Expense{ID: 1, Amount: *input.Amount, Memo: input.Memo, SpentAt: input.SpentAt, Category: models.Category{ID: *input.CategoryID, Name: ""}}, nil
 }
 
-func (m *mockRepo) FindAll() ([]models.Expense, error) {
+func (m *mockRepo) FindAll(userID string) ([]models.Expense, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (m *mockRepo) GetExpenseByID(id int32) (models.Expense, error) {
+func (m *mockRepo) GetExpenseByID(userID string, id int32) (models.Expense, error) {
 	return models.Expense{}, errors.New("not implemented")
 }
 
-func (m *mockRepo) DeleteExpense(id int32) error { return errors.New("not implemented") }
+func (m *mockRepo) DeleteExpense(userID string, id int32) error { return errors.New("not implemented") }
 
-func (m *mockRepo) UpdateExpense(input models.UpdateExpenseInput) (models.Expense, error) {
+func (m *mockRepo) UpdateExpense(userID string, input models.UpdateExpenseInput) (models.Expense, error) {
 	return models.Expense{}, errors.New("not implemented")
 }
 
@@ -91,7 +91,7 @@ func TestCreateExpenseValidation(t *testing.T) {
 			cr := &mockCategoryRepo{exists: exists}
 			s := NewExpenseService(m, cr)
 
-			out, err := s.CreateExpense(tc.input)
+			out, err := s.CreateExpense("test-user", tc.input)
 
 			if tc.wantErr {
 				if !assert.Error(t, err, "expected error for case %s", tc.name) {
@@ -137,7 +137,7 @@ func TestCreateExpense_DBErrorMapping(t *testing.T) {
 			cr := &mockCategoryRepo{exists: map[int32]bool{1: true}}
 			s := NewExpenseService(m, cr)
 
-			_, err := s.CreateExpense(validInput)
+			_, err := s.CreateExpense("test-user", validInput)
 			if !assert.Error(t, err) {
 				return
 			}
@@ -174,19 +174,19 @@ type mockRepoErr struct {
 	returnErr error
 }
 
-func (m *mockRepoErr) CreateExpense(input models.CreateExpenseInput) (models.Expense, error) {
+func (m *mockRepoErr) CreateExpense(userID string, input models.CreateExpenseInput) (models.Expense, error) {
 	return models.Expense{}, m.returnErr
 }
 
-func (m *mockRepoErr) FindAll() ([]models.Expense, error) { return nil, errors.New("not implemented") }
+func (m *mockRepoErr) FindAll(userID string) ([]models.Expense, error) { return nil, errors.New("not implemented") }
 
-func (m *mockRepoErr) GetExpenseByID(id int32) (models.Expense, error) {
+func (m *mockRepoErr) GetExpenseByID(userID string, id int32) (models.Expense, error) {
 	return models.Expense{}, errors.New("not implemented")
 }
 
-func (m *mockRepoErr) DeleteExpense(id int32) error { return errors.New("not implemented") }
+func (m *mockRepoErr) DeleteExpense(userID string, id int32) error { return errors.New("not implemented") }
 
-func (m *mockRepoErr) UpdateExpense(input models.UpdateExpenseInput) (models.Expense, error) {
+func (m *mockRepoErr) UpdateExpense(userID string, input models.UpdateExpenseInput) (models.Expense, error) {
 	return models.Expense{}, errors.New("not implemented")
 }
 
@@ -202,7 +202,7 @@ func TestCreateExpense_CategoryExistsError(t *testing.T) {
 	cr := &mockCategoryRepo{err: errors.New("db error")}
 	s := NewExpenseService(m, cr)
 
-	_, err := s.CreateExpense(input)
+	_, err := s.CreateExpense("test-user", input)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -258,7 +258,7 @@ func TestCreateExpense_StatusValidation(t *testing.T) {
 			cr := &mockCategoryRepo{exists: exists}
 			s := NewExpenseService(m, cr)
 
-			_, err := s.CreateExpense(tc.input)
+			_, err := s.CreateExpense("test-user", tc.input)
 
 			if tc.wantErr {
 				if !assert.Error(t, err) {
@@ -283,26 +283,26 @@ type mockDeleteRepo struct {
 	returnErr error
 }
 
-func (m *mockDeleteRepo) CreateExpense(input models.CreateExpenseInput) (models.Expense, error) {
+func (m *mockDeleteRepo) CreateExpense(userID string, input models.CreateExpenseInput) (models.Expense, error) {
 	return models.Expense{}, errors.New("not implemented")
 }
 
-func (m *mockDeleteRepo) FindAll() ([]models.Expense, error) {
+func (m *mockDeleteRepo) FindAll(userID string) ([]models.Expense, error) {
 	return nil, errors.New("not implemented")
 }
 
 // DeleteExpense is the method under test expectation
-func (m *mockDeleteRepo) DeleteExpense(id int32) error {
+func (m *mockDeleteRepo) DeleteExpense(userID string, id int32) error {
 	m.called = true
 	m.deletedID = id
 	return m.returnErr
 }
 
-func (m *mockDeleteRepo) UpdateExpense(input models.UpdateExpenseInput) (models.Expense, error) {
+func (m *mockDeleteRepo) UpdateExpense(userID string, input models.UpdateExpenseInput) (models.Expense, error) {
 	return models.Expense{}, errors.New("not implemented")
 }
 
-func (m *mockDeleteRepo) GetExpenseByID(id int32) (models.Expense, error) {
+func (m *mockDeleteRepo) GetExpenseByID(userID string, id int32) (models.Expense, error) {
 	// simulate existence: 9999 -> not found, others exist
 	if id == 9999 {
 		return models.Expense{}, sqlErrNoRows()
@@ -323,7 +323,7 @@ func TestDeleteExpense_Success(t *testing.T) {
 	// Construct concrete service to allow calling DeleteExpense (to be implemented)
 	s := &expenseService{repo: repo, categoryRepo: cr}
 
-	err := s.DeleteExpense(1)
+	err := s.DeleteExpense("test-user", 1)
 	assert.NoError(t, err)
 	assert.True(t, repo.called, "repo should be called")
 	assert.Equal(t, int32(1), repo.deletedID)
@@ -336,7 +336,7 @@ func TestDeleteExpense_NotFound(t *testing.T) {
 	cr := &mockCategoryRepo{}
 	s := &expenseService{repo: repo, categoryRepo: cr}
 
-	err := s.DeleteExpense(9999)
+	err := s.DeleteExpense("test-user", 9999)
 	var nfe *NotFoundError
 	if !assert.ErrorAs(t, err, &nfe) {
 		return
@@ -362,7 +362,7 @@ func TestDeleteExpense_StatusAgnostic(t *testing.T) {
 			cr := &mockCategoryRepo{}
 			s := &expenseService{repo: repo, categoryRepo: cr}
 
-			err := s.DeleteExpense(tc.id)
+			err := s.DeleteExpense("test-user", tc.id)
 			assert.NoError(t, err)
 			assert.True(t, repo.called)
 			assert.Equal(t, int32(tc.id), repo.deletedID)
@@ -379,25 +379,25 @@ type mockUpdateRepo struct {
 	getErr    error
 }
 
-func (m *mockUpdateRepo) CreateExpense(input models.CreateExpenseInput) (models.Expense, error) {
+func (m *mockUpdateRepo) CreateExpense(userID string, input models.CreateExpenseInput) (models.Expense, error) {
 	return models.Expense{}, errors.New("not implemented")
 }
 
-func (m *mockUpdateRepo) FindAll() ([]models.Expense, error) {
+func (m *mockUpdateRepo) FindAll(userID string) ([]models.Expense, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (m *mockUpdateRepo) GetExpenseByID(id int32) (models.Expense, error) {
+func (m *mockUpdateRepo) GetExpenseByID(userID string, id int32) (models.Expense, error) {
 	if m.getErr != nil {
 		return models.Expense{}, m.getErr
 	}
 	return m.current, nil
 }
 
-func (m *mockUpdateRepo) DeleteExpense(id int32) error { return errors.New("not implemented") }
+func (m *mockUpdateRepo) DeleteExpense(userID string, id int32) error { return errors.New("not implemented") }
 
 // UpdateExpense updates fields; if Status is empty, keep current status
-func (m *mockUpdateRepo) UpdateExpense(input models.UpdateExpenseInput) (models.Expense, error) {
+func (m *mockUpdateRepo) UpdateExpense(userID string, input models.UpdateExpenseInput) (models.Expense, error) {
 	m.called = true
 	m.in = input
 	if m.returnErr != nil {
@@ -438,7 +438,7 @@ func TestUpdateExpense_NormalCases(t *testing.T) {
 			SpentAt:    "2025-02-01",
 			Status:     "confirmed",
 		}
-		out, err := s.UpdateExpense(input)
+		out, err := s.UpdateExpense("test-user", input)
 
 		assert.NoError(t, err)
 		assert.True(t, repo.called)
@@ -465,7 +465,7 @@ func TestUpdateExpense_NormalCases(t *testing.T) {
 			SpentAt:    "2025-03-15",
 			Status:     "", // no change
 		}
-		out, err := s.UpdateExpense(input)
+		out, err := s.UpdateExpense("test-user", input)
 
 		assert.NoError(t, err)
 		assert.True(t, repo.called)
@@ -492,7 +492,7 @@ func TestUpdateExpense_NormalCases(t *testing.T) {
 			SpentAt:    "2025-04-10",
 			Status:     "", // no change
 		}
-		out, err := s.UpdateExpense(input)
+		out, err := s.UpdateExpense("test-user", input)
 
 		assert.NoError(t, err)
 		assert.True(t, repo.called)
@@ -520,7 +520,7 @@ func TestUpdateExpense_InvalidTransition_ConfirmedToPlanned(t *testing.T) {
 		Status:     "planned",
 	}
 
-	_, err := s.UpdateExpense(input)
+	_, err := s.UpdateExpense("test-user", input)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -548,7 +548,7 @@ func TestUpdateExpense_NotFound(t *testing.T) {
 		Status:     "planned",
 	}
 
-	_, err := s.UpdateExpense(input)
+	_, err := s.UpdateExpense("test-user", input)
 	if err == nil {
 		t.Fatalf("expected error")
 	}

@@ -18,7 +18,7 @@ func NewExpenseRepositorySQLC(q *db.Queries) ExpenseRepository {
 	return &expenseRepositorySQLC{q: q}
 }
 
-func (r *expenseRepositorySQLC) CreateExpense(input models.CreateExpenseInput) (models.Expense, error) {
+func (r *expenseRepositorySQLC) CreateExpense(userID string, input models.CreateExpenseInput) (models.Expense, error) {
 	// 複数フォーマットに対応するため、RFC3339 をまず試し、失敗したら日付のみ (2006-01-02) を試す
 	var spentAt time.Time
 	var err error
@@ -35,6 +35,7 @@ func (r *expenseRepositorySQLC) CreateExpense(input models.CreateExpenseInput) (
 	}
 
 	params := db.CreateExpenseParams{
+		UserID:     userID,
 		Amount:     int32(*input.Amount),
 		CategoryID: int32(*input.CategoryID),
 		Memo:       sql.NullString{String: input.Memo, Valid: input.Memo != ""},
@@ -47,7 +48,10 @@ func (r *expenseRepositorySQLC) CreateExpense(input models.CreateExpenseInput) (
 		return models.Expense{}, err
 	}
 
-	row, err := r.q.GetExpenseWithCategoryByID(context.Background(), id)
+	row, err := r.q.GetExpenseWithCategoryByID(context.Background(), db.GetExpenseWithCategoryByIDParams{
+		UserID: userID,
+		ID:     id,
+	})
 	if err != nil {
 		return models.Expense{}, err
 	}
@@ -55,8 +59,8 @@ func (r *expenseRepositorySQLC) CreateExpense(input models.CreateExpenseInput) (
 	return dbExpenseToModel(row), nil
 }
 
-func (r *expenseRepositorySQLC) FindAll() ([]models.Expense, error) {
-	items, err := r.q.ListExpenses(context.Background())
+func (r *expenseRepositorySQLC) FindAll(userID string) ([]models.Expense, error) {
+	items, err := r.q.ListExpenses(context.Background(), userID)
 	if err != nil {
 		return nil, err
 	}
@@ -101,8 +105,11 @@ func dbListExpenseRowToModel(e db.ListExpensesRow) models.Expense {
 	}
 }
 
-func (r *expenseRepositorySQLC) GetExpenseByID(id int32) (models.Expense, error) {
-	row, err := r.q.GetExpenseWithCategoryByID(context.Background(), id)
+func (r *expenseRepositorySQLC) GetExpenseByID(userID string, id int32) (models.Expense, error) {
+	row, err := r.q.GetExpenseWithCategoryByID(context.Background(), db.GetExpenseWithCategoryByIDParams{
+		UserID: userID,
+		ID:     id,
+	})
 	if err != nil {
 		return models.Expense{}, err
 	}
@@ -110,11 +117,14 @@ func (r *expenseRepositorySQLC) GetExpenseByID(id int32) (models.Expense, error)
 	return dbExpenseToModel(row), nil
 }
 
-func (r *expenseRepositorySQLC) DeleteExpense(id int32) error {
-	return r.q.DeleteExpense(context.Background(), id)
+func (r *expenseRepositorySQLC) DeleteExpense(userID string, id int32) error {
+	return r.q.DeleteExpense(context.Background(), db.DeleteExpenseParams{
+		ID:     id,
+		UserID: userID,
+	})
 }
 
-func (r *expenseRepositorySQLC) UpdateExpense(input models.UpdateExpenseInput) (models.Expense, error) {
+func (r *expenseRepositorySQLC) UpdateExpense(userID string, input models.UpdateExpenseInput) (models.Expense, error) {
 	// 複数フォーマットに対応するため、RFC3339 をまず試し、失敗したら日付のみ (2006-01-02) を試す
 	var spentAt time.Time
 	var err error
@@ -137,6 +147,7 @@ func (r *expenseRepositorySQLC) UpdateExpense(input models.UpdateExpenseInput) (
 		Memo:       sql.NullString{String: input.Memo, Valid: input.Memo != ""},
 		SpentAt:    spentAt,
 		Status:     defaultStatus(input.Status),
+		UserID:     userID,
 	}
 	err = r.q.UpdateExpense(context.Background(), params)
 
@@ -144,5 +155,5 @@ func (r *expenseRepositorySQLC) UpdateExpense(input models.UpdateExpenseInput) (
 		return models.Expense{}, err
 	}
 
-	return r.GetExpenseByID(int32(input.ID))
+	return r.GetExpenseByID(userID, int32(input.ID))
 }

@@ -32,7 +32,9 @@ func (h *ExpenseHandler) CreateExpense(c *gin.Context) {
 		return
 	}
 
-	expense, err := h.service.CreateExpense(input)
+	// TODO: Extract userID from authentication context when auth is implemented
+	userID := DummyUserID
+	expense, err := h.service.CreateExpense(userID, input)
 	if err != nil {
 		var ve *services.ValidationError
 		if errors.As(err, &ve) {
@@ -47,7 +49,9 @@ func (h *ExpenseHandler) CreateExpense(c *gin.Context) {
 }
 
 func (h *ExpenseHandler) ListExpenses(c *gin.Context) {
-	expenses, err := h.service.ListExpenses()
+	// TODO: Extract userID from authentication context when auth is implemented
+	userID := DummyUserID
+	expenses, err := h.service.ListExpenses(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list expenses"})
 		return
@@ -63,7 +67,9 @@ func (h *ExpenseHandler) DeleteExpense(c *gin.Context) {
 		return
 	}
 
-	err = h.service.DeleteExpense(int(id))
+	// TODO: Extract userID from authentication context when auth is implemented
+	userID := DummyUserID
+	err = h.service.DeleteExpense(userID, int(id))
 	if err != nil {
 		var ve *services.ValidationError
 		if errors.As(err, &ve) {
@@ -110,7 +116,9 @@ func (h *ExpenseHandler) UpdateExpense(c *gin.Context) {
 		Status:     body.Status,
 	}
 
-	exp, err := h.service.UpdateExpense(input)
+	// TODO: Extract userID from authentication context when auth is implemented
+	userID := DummyUserID
+	exp, err := h.service.UpdateExpense(userID, input)
 	if err != nil {
 		// Validation errors -> 400
 		var ve *services.ValidationError

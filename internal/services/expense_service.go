@@ -19,10 +19,10 @@ const (
 )
 
 type ExpenseService interface {
-	CreateExpense(input models.CreateExpenseInput) (models.Expense, error)
-	ListExpenses() ([]models.Expense, error)
-	DeleteExpense(id int) error
-	UpdateExpense(input models.UpdateExpenseInput) (models.Expense, error)
+	CreateExpense(userID string, input models.CreateExpenseInput) (models.Expense, error)
+	ListExpenses(userID string) ([]models.Expense, error)
+	DeleteExpense(userID string, id int) error
+	UpdateExpense(userID string, input models.UpdateExpenseInput) (models.Expense, error)
 }
 
 type expenseService struct {
@@ -34,7 +34,7 @@ func NewExpenseService(repo repositories.ExpenseRepository, categoryRepo reposit
 	return &expenseService{repo: repo, categoryRepo: categoryRepo}
 }
 
-func (s *expenseService) CreateExpense(input models.CreateExpenseInput) (models.Expense, error) {
+func (s *expenseService) CreateExpense(userID string, input models.CreateExpenseInput) (models.Expense, error) {
 	// 金額チェック: 入力が存在するかをまず確認し、その後業務上の制約を確認する
 	if input.Amount == nil {
 		return models.Expense{}, &ValidationError{Message: "amount must be provided"}
@@ -100,7 +100,7 @@ func (s *expenseService) CreateExpense(input models.CreateExpenseInput) (models.
 		return models.Expense{}, &ValidationError{Message: "category_id is invalid"}
 	}
 
-	exp, err := s.repo.CreateExpense(input)
+	exp, err := s.repo.CreateExpense(userID, input)
 	if err != nil {
 		// sql.ErrNoRows -> NotFoundError
 		if errors.Is(err, sql.ErrNoRows) {
@@ -122,12 +122,12 @@ func (s *expenseService) CreateExpense(input models.CreateExpenseInput) (models.
 	return exp, nil
 }
 
-func (s *expenseService) ListExpenses() ([]models.Expense, error) {
-	return s.repo.FindAll()
+func (s *expenseService) ListExpenses(userID string) ([]models.Expense, error) {
+	return s.repo.FindAll(userID)
 }
 
-func (s *expenseService) DeleteExpense(id int) error {
-	expense, err := s.repo.GetExpenseByID(int32(id))
+func (s *expenseService) DeleteExpense(userID string, id int) error {
+	expense, err := s.repo.GetExpenseByID(userID, int32(id))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return &NotFoundError{Message: "expense not found"}
@@ -138,12 +138,12 @@ func (s *expenseService) DeleteExpense(id int) error {
 		return &NotFoundError{Message: "expense not found"}
 	}
 
-	return s.repo.DeleteExpense(int32(id))
+	return s.repo.DeleteExpense(userID, int32(id))
 }
 
-func (s *expenseService) UpdateExpense(input models.UpdateExpenseInput) (models.Expense, error) {
+func (s *expenseService) UpdateExpense(userID string, input models.UpdateExpenseInput) (models.Expense, error) {
 	// 現在の状態を取得し、ステータス遷移のバリデーションを行う
-	current, err := s.repo.GetExpenseByID(int32(input.ID))
+	current, err := s.repo.GetExpenseByID(userID, int32(input.ID))
 	if err != nil {
 		// テスト仕様に合わせ、見つからない場合も遷移エラーとして扱う
 		if errors.Is(err, sql.ErrNoRows) {
@@ -171,5 +171,5 @@ func (s *expenseService) UpdateExpense(input models.UpdateExpenseInput) (models.
 
 	// リポジトリに渡す前に正規化済みステータスをセット
 	input.Status = desiredStatus
-	return s.repo.UpdateExpense(input)
+	return s.repo.UpdateExpense(userID, input)
 }

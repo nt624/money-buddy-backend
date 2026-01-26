@@ -13,18 +13,20 @@ import (
 
 const createExpense = `-- name: CreateExpense :one
 INSERT INTO expenses (
+  user_id,
   amount,
   category_id,
   memo,
   spent_at,
   status
 ) VALUES (
-  $1, $2, $3, $4, $5
+  $1, $2, $3, $4, $5, $6
 )
 RETURNING id
 `
 
 type CreateExpenseParams struct {
+	UserID     string
 	Amount     int32
 	CategoryID int32
 	Memo       sql.NullString
@@ -34,6 +36,7 @@ type CreateExpenseParams struct {
 
 func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (int32, error) {
 	row := q.db.QueryRowContext(ctx, createExpense,
+		arg.UserID,
 		arg.Amount,
 		arg.CategoryID,
 		arg.Memo,
@@ -47,11 +50,16 @@ func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (i
 
 const deleteExpense = `-- name: DeleteExpense :exec
 DELETE FROM expenses
-WHERE id = $1
+WHERE id = $1 AND user_id = $2
 `
 
-func (q *Queries) DeleteExpense(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, deleteExpense, id)
+type DeleteExpenseParams struct {
+	ID     int32
+	UserID string
+}
+
+func (q *Queries) DeleteExpense(ctx context.Context, arg DeleteExpenseParams) error {
+	_, err := q.db.ExecContext(ctx, deleteExpense, arg.ID, arg.UserID)
 	return err
 }
 
@@ -64,8 +72,13 @@ SELECT
   spent_at,
   status
 FROM expenses
-WHERE id = $1
+WHERE user_id = $1 AND id = $2
 `
+
+type GetExpenseByIDParams struct {
+	UserID string
+	ID     int32
+}
 
 type GetExpenseByIDRow struct {
 	ID         int32
@@ -76,8 +89,8 @@ type GetExpenseByIDRow struct {
 	Status     string
 }
 
-func (q *Queries) GetExpenseByID(ctx context.Context, id int32) (GetExpenseByIDRow, error) {
-	row := q.db.QueryRowContext(ctx, getExpenseByID, id)
+func (q *Queries) GetExpenseByID(ctx context.Context, arg GetExpenseByIDParams) (GetExpenseByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getExpenseByID, arg.UserID, arg.ID)
 	var i GetExpenseByIDRow
 	err := row.Scan(
 		&i.ID,
@@ -101,8 +114,13 @@ SELECT
   c.name AS category_name
 FROM expenses e
 JOIN categories c ON e.category_id = c.id
-WHERE e.id = $1
+WHERE e.user_id = $1 AND e.id = $2
 `
+
+type GetExpenseWithCategoryByIDParams struct {
+	UserID string
+	ID     int32
+}
 
 type GetExpenseWithCategoryByIDRow struct {
 	ID           int32
@@ -114,8 +132,8 @@ type GetExpenseWithCategoryByIDRow struct {
 	CategoryName string
 }
 
-func (q *Queries) GetExpenseWithCategoryByID(ctx context.Context, id int32) (GetExpenseWithCategoryByIDRow, error) {
-	row := q.db.QueryRowContext(ctx, getExpenseWithCategoryByID, id)
+func (q *Queries) GetExpenseWithCategoryByID(ctx context.Context, arg GetExpenseWithCategoryByIDParams) (GetExpenseWithCategoryByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getExpenseWithCategoryByID, arg.UserID, arg.ID)
 	var i GetExpenseWithCategoryByIDRow
 	err := row.Scan(
 		&i.ID,
@@ -140,6 +158,7 @@ SELECT
   c.name AS category_name
 FROM expenses e
 JOIN categories c ON e.category_id = c.id
+WHERE e.user_id = $1
 ORDER BY spent_at DESC
 `
 
@@ -153,8 +172,8 @@ type ListExpensesRow struct {
 	CategoryName string
 }
 
-func (q *Queries) ListExpenses(ctx context.Context) ([]ListExpensesRow, error) {
-	rows, err := q.db.QueryContext(ctx, listExpenses)
+func (q *Queries) ListExpenses(ctx context.Context, userID string) ([]ListExpensesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listExpenses, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +212,7 @@ SET
   spent_at = $5,
   status = $6,
   update_at = now()
-WHERE id = $1
+WHERE id = $1 AND user_id = $7
 `
 
 type UpdateExpenseParams struct {
@@ -203,6 +222,7 @@ type UpdateExpenseParams struct {
 	Memo       sql.NullString
 	SpentAt    time.Time
 	Status     string
+	UserID     string
 }
 
 func (q *Queries) UpdateExpense(ctx context.Context, arg UpdateExpenseParams) error {
@@ -213,6 +233,7 @@ func (q *Queries) UpdateExpense(ctx context.Context, arg UpdateExpenseParams) er
 		arg.Memo,
 		arg.SpentAt,
 		arg.Status,
+		arg.UserID,
 	)
 	return err
 }
@@ -222,15 +243,16 @@ UPDATE expenses
 SET
   status = $2,
   update_at = now()
-WHERE id = $1
+WHERE id = $1 AND user_id = $3
 `
 
 type UpdateExpenseStatusParams struct {
 	ID     int32
 	Status string
+	UserID string
 }
 
 func (q *Queries) UpdateExpenseStatus(ctx context.Context, arg UpdateExpenseStatusParams) error {
-	_, err := q.db.ExecContext(ctx, updateExpenseStatus, arg.ID, arg.Status)
+	_, err := q.db.ExecContext(ctx, updateExpenseStatus, arg.ID, arg.Status, arg.UserID)
 	return err
 }
