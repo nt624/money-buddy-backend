@@ -40,5 +40,11 @@ func main() {
 	categoryService := services.NewCategoryService(categoryRepo)
 	handlers.NewCategoryHandler(r, categoryService)
 
+	userRepo := repository.NewUserRepositorySQLC(queries)
+	fixedCostRepo := repository.NewFixedCostRepositorySQLC(queries)
+	txManager := db.NewSQLTxManager(dbConn)
+	initialSetupService := services.NewInitialSetupService(userRepo, fixedCostRepo, txManager)
+	handlers.NewInitialSetupHandler(r, initialSetupService)
+
 	r.Run() // デフォルトで:8080で起動
 }

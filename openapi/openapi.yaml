@@ -9,6 +9,8 @@ tags:
     description: "Expense operations"
   - name: "categories"
     description: "Category operations"
+  - name: "setup"
+    description: "Initial setup operations"
 paths:
   /expenses:
     post:
@@ -158,6 +160,43 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /api/setup:
+    post:
+      tags:
+        - "setup"
+      summary: "Complete initial setup"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitialSetupRequest'
+      responses:
+        "200":
+          description: "Initial setup completed"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitialSetupResponse'
+        "400":
+          description: "Validation Error"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "422":
+          description: "Business Error"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          description: "Internal Server Error"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   schemas:
     Expense:
@@ -258,6 +297,36 @@ components:
         - category_id
         - spent_at
 
+    FixedCostInput:
+      type: object
+      properties:
+        name:
+          type: string
+        amount:
+          type: integer
+          minimum: 1
+      required:
+        - name
+        - amount
+
+    InitialSetupRequest:
+      type: object
+      properties:
+        income:
+          type: integer
+          minimum: 1
+        savingGoal:
+          type: integer
+          minimum: 0
+        fixedCosts:
+          type: array
+          items:
+            $ref: '#/components/schemas/FixedCostInput'
+      required:
+        - income
+        - savingGoal
+        - fixedCosts
+
     UpdateExpenseResponse:
       type: object
       properties:
@@ -265,6 +334,15 @@ components:
           $ref: '#/components/schemas/Expense'
       required:
         - expense
+
+    InitialSetupResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "ok"
+      required:
+        - status
 
     ErrorResponse:
       type: object
