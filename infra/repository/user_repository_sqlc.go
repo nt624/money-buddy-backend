@@ -5,6 +5,7 @@ import (
 	"time"
 
 	db "money-buddy-backend/db/generated"
+	"money-buddy-backend/infra/transaction"
 	"money-buddy-backend/internal/models"
 	"money-buddy-backend/internal/repositories"
 )
@@ -17,17 +18,24 @@ func NewUserRepositorySQLC(q *db.Queries) repositories.UserRepository {
 	return &userRepositorySQLC{q: q}
 }
 
+func (r *userRepositorySQLC) queries(ctx context.Context) *db.Queries {
+	if tx, ok := transaction.TxFromContext(ctx); ok {
+		return r.q.WithTx(tx)
+	}
+	return r.q
+}
+
 func (r *userRepositorySQLC) CreateUser(ctx context.Context, id string, income int, savingGoal int) error {
 	params := db.CreateUserParams{
 		ID:         id,
 		Income:     int32(income),
 		SavingGoal: int32(savingGoal),
 	}
-	return r.q.CreateUser(ctx, params)
+	return r.queries(ctx).CreateUser(ctx, params)
 }
 
 func (r *userRepositorySQLC) GetUserByID(ctx context.Context, id string) (models.User, error) {
-	row, err := r.q.GetUserByID(ctx, id)
+	row, err := r.queries(ctx).GetUserByID(ctx, id)
 	if err != nil {
 		return models.User{}, err
 	}
@@ -41,7 +49,7 @@ func (r *userRepositorySQLC) UpdateUserSettings(ctx context.Context, id string, 
 		Income:     int32(income),
 		SavingGoal: int32(savingGoal),
 	}
-	return r.q.UpdateUserSettings(ctx, params)
+	return r.queries(ctx).UpdateUserSettings(ctx, params)
 }
 
 func dbUserToModel(u db.User) models.User {

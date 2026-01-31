@@ -30,6 +30,10 @@ func (m *txMock) Rollback() error {
 	return args.Error(0)
 }
 
+func (m *txMock) Context(ctx context.Context) context.Context {
+	return ctx
+}
+
 func (m *txManagerMock) Begin(ctx context.Context) (Tx, error) {
 	args := m.Called(ctx)
 	if tx, ok := args.Get(0).(Tx); ok {

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	db "money-buddy-backend/db/generated"
+	"money-buddy-backend/infra/transaction"
 	"money-buddy-backend/internal/models"
 	"money-buddy-backend/internal/repositories"
 )
@@ -17,13 +18,20 @@ func NewFixedCostRepositorySQLC(q *db.Queries) repositories.FixedCostRepository 
 	return &fixedCostRepositorySQLC{q: q}
 }
 
+func (r *fixedCostRepositorySQLC) queries(ctx context.Context) *db.Queries {
+	if tx, ok := transaction.TxFromContext(ctx); ok {
+		return r.q.WithTx(tx)
+	}
+	return r.q
+}
+
 func (r *fixedCostRepositorySQLC) CreateFixedCost(ctx context.Context, userID string, name string, amount int) (models.FixedCost, error) {
 	params := db.CreateFixedCostParams{
 		UserID: userID,
 		Name:   name,
 		Amount: int32(amount),
 	}
-	row, err := r.q.CreateFixedCost(ctx, params)
+	row, err := r.queries(ctx).CreateFixedCost(ctx, params)
 	if err != nil {
 		return models.FixedCost{}, err
 	}
@@ -32,7 +40,7 @@ func (r *fixedCostRepositorySQLC) CreateFixedCost(ctx context.Context, userID st
 }
 
 func (r *fixedCostRepositorySQLC) ListFixedCostsByUser(ctx context.Context, userID string) ([]models.FixedCost, error) {
-	items, err := r.q.ListFixedCostsByUser(ctx, userID)
+	items, err := r.queries(ctx).ListFixedCostsByUser(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +54,7 @@ func (r *fixedCostRepositorySQLC) ListFixedCostsByUser(ctx context.Context, user
 }
 
 func (r *fixedCostRepositorySQLC) DeleteFixedCostsByUser(ctx context.Context, userID string) error {
-	return r.q.DeleteFixedCostsByUser(ctx, userID)
+	return r.queries(ctx).DeleteFixedCostsByUser(ctx, userID)
 }
 
 func (r *fixedCostRepositorySQLC) BulkCreateFixedCosts(ctx context.Context, userID string, fixedCosts []models.FixedCostInput) error {
@@ -68,7 +76,7 @@ func (r *fixedCostRepositorySQLC) BulkCreateFixedCosts(ctx context.Context, user
 		Column2: names,
 		Column3: amounts,
 	}
-	return r.q.BulkCreateFixedCosts(ctx, params)
+	return r.queries(ctx).BulkCreateFixedCosts(ctx, params)
 }
 
 func (r *fixedCostRepositorySQLC) UpdateFixedCost(ctx context.Context, id int32, userID string, name string, amount int) error {
@@ -78,11 +86,11 @@ func (r *fixedCostRepositorySQLC) UpdateFixedCost(ctx context.Context, id int32,
 		Amount: int32(amount),
 		UserID: userID,
 	}
-	return r.q.UpdateFixedCost(ctx, params)
+	return r.queries(ctx).UpdateFixedCost(ctx, params)
 }
 
 func (r *fixedCostRepositorySQLC) DeleteFixedCost(ctx context.Context, id int32, userID string) error {
-	return r.q.DeleteFixedCost(ctx, db.DeleteFixedCostParams{
+	return r.queries(ctx).DeleteFixedCost(ctx, db.DeleteFixedCostParams{
 		ID:     id,
 		UserID: userID,
 	})

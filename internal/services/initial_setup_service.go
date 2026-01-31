@@ -47,10 +47,12 @@ func (s *initialSetupService) CompleteInitialSetup(ctx context.Context, userID s
 		return err
 	}
 
-	user, err := s.userRepo.GetUserByID(ctx, userID)
+	txCtx := tx.Context(ctx)
+
+	user, err := s.userRepo.GetUserByID(txCtx, userID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			if err := s.userRepo.CreateUser(ctx, userID, income, savingGoal); err != nil {
+			if err := s.userRepo.CreateUser(txCtx, userID, income, savingGoal); err != nil {
 				_ = tx.Rollback()
 				return err
 			}
@@ -59,17 +61,17 @@ func (s *initialSetupService) CompleteInitialSetup(ctx context.Context, userID s
 			return err
 		}
 	} else if user != (models.User{}) {
-		if err := s.userRepo.UpdateUserSettings(ctx, userID, income, savingGoal); err != nil {
+		if err := s.userRepo.UpdateUserSettings(txCtx, userID, income, savingGoal); err != nil {
 			_ = tx.Rollback()
 			return err
 		}
 	}
 
-	if err := s.fixedCostRepo.DeleteFixedCostsByUser(ctx, userID); err != nil {
+	if err := s.fixedCostRepo.DeleteFixedCostsByUser(txCtx, userID); err != nil {
 		_ = tx.Rollback()
 		return err
 	}
-	if err := s.fixedCostRepo.BulkCreateFixedCosts(ctx, userID, fixedCosts); err != nil {
+	if err := s.fixedCostRepo.BulkCreateFixedCosts(txCtx, userID, fixedCosts); err != nil {
 		_ = tx.Rollback()
 		return err
 	}
