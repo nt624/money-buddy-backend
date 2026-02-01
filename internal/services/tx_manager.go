@@ -6,6 +6,7 @@ import "context"
 type Tx interface {
 	Commit() error
 	Rollback() error
+	Context(ctx context.Context) context.Context
 }
 
 // TxManager はトランザクション開始を担うインターフェースです。
