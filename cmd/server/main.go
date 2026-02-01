@@ -46,5 +46,8 @@ func main() {
 	initialSetupService := services.NewInitialSetupService(userRepo, fixedCostRepo, txManager)
 	handlers.NewInitialSetupHandler(r, initialSetupService)
 
+	userService := services.NewUserService(userRepo)
+	handlers.NewUserHandler(r, userService)
+
 	r.Run() // デフォルトで:8080で起動
 }
