@@ -22,7 +22,7 @@ type initialSetupRequest struct {
 
 func NewInitialSetupHandler(r *gin.Engine, service services.InitialSetupService) {
 	h := &InitialSetupHandler{service: service}
-	r.POST("/api/setup", h.CompleteInitialSetup)
+	r.POST("/setup", h.CompleteInitialSetup)
 }
 
 func (h *InitialSetupHandler) CompleteInitialSetup(c *gin.Context) {
